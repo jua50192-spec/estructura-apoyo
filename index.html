@@ -29,15 +29,15 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16p
 main{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 [hidden]{display:none!important}
 h2{font-family:var(--disp);font-size:22px;margin:0 0 10px}
-.cand{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
-.ph{flex:none;width:84px;height:84px;border-radius:50%;background:var(--tile);border:2px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:14px}
+.cand{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.ph{flex:none;width:76px;height:76px;border-radius:50%;background:var(--tile);border:2px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:14px}
 .ph img{width:100%;height:100%;object-fit:cover;display:block}
-.cn{min-width:0;flex:1}
-.clr{display:flex;align-items:center;gap:8px;margin-bottom:2px}
-.lg{flex:none;width:44px;height:44px;border-radius:8px;background:var(--tile);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:11px}
+.cn{min-width:0;flex:1;text-align:center}
+.clr{margin-bottom:4px}
+.lg{flex:none;width:76px;height:76px;border-radius:50%;background:var(--tile);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:11px}
 .lg img{width:100%;height:100%;object-fit:contain;display:block}
-.cl{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
-.cname{font:700 28px/1.1 var(--disp);overflow-wrap:anywhere}
+.cl{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.cname{font:700 26px/1.1 var(--disp);overflow-wrap:anywhere}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:14px}
 .note{border-radius:8px;padding:10px 12px;font-size:14px;background:var(--warnbg);color:var(--warn)}
 .note.bad{background:var(--badbg);color:var(--bad)}
@@ -91,9 +91,10 @@ th{font-weight:600;color:var(--mute);border-top:0}
   <header class="cand" id="hd">
     <div class="ph" id="hph"><img id="himg" alt="" hidden><span id="hpt">Foto</span></div>
     <div class="cn">
-      <div class="clr"><div class="lg"><img id="hlogo" alt="" hidden><span id="hlt">Logo</span></div><span class="cl">Estructura de apoyo</span></div>
+      <div class="clr"><span class="cl">Estructura de apoyo</span></div>
       <div class="cname" id="hname">Nombre del candidato</div>
     </div>
+    <div class="lg"><img id="hlogo" alt="" hidden><span id="hlt">Logo</span></div>
   </header>
 
   <section id="sLoad" class="card"><p class="empty">Cargando…</p></section>
@@ -272,7 +273,7 @@ function joinPages(pages){
     G.ok=G.mil!=null&&G.mil===G.people.length&&G.people.every(function(q){return q.nombre&&q.estado});
     return G});
 }
-
+if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joinPages};
 
 </script>
 <script>
