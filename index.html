@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Estructura de Apoyo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap">
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.1/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<style>
+:root{
+  --bg:#eef2f4; --card:#ffffff; --ink:#14212b; --mute:#5b6b76; --line:#d3dce1;
+  --brand:#0e5a6e; --brand-ink:#ffffff; --ok:#1c7a4a; --okbg:#e3f3ea; --warn:#8a5a00; --warnbg:#fbefd2; --bad:#a3262a; --badbg:#fbe3e3;
+  --tile:#e6edf0;
+  --disp:"Barlow Condensed","Arial Narrow",sans-serif; --body:"Barlow",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0f1a20; --card:#17252d; --ink:#e8eff2; --mute:#9db0ba; --line:#2b3e48;
+  --brand:#59b4cb; --brand-ink:#08222b; --ok:#6fd09b; --okbg:#173a29; --warn:#f0c46a; --warnbg:#3a2d0c; --bad:#ff9a9d; --badbg:#431a1c; --tile:#1e2f38; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.4;
+  padding-block:calc(16px + env(safe-area-inset-top,0px)) calc(40px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+[hidden]{display:none!important}
+h2{font-family:var(--disp);font-size:22px;margin:0 0 10px}
+.cand{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.ph{flex:none;width:84px;height:84px;border-radius:50%;background:var(--tile);border:2px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:14px}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.cn{min-width:0;flex:1}
+.clr{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.lg{flex:none;width:44px;height:44px;border-radius:8px;background:var(--tile);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:11px}
+.lg img{width:100%;height:100%;object-fit:contain;display:block}
+.cl{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.cname{font:700 28px/1.1 var(--disp);overflow-wrap:anywhere}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:14px}
+.note{border-radius:8px;padding:10px 12px;font-size:14px;background:var(--warnbg);color:var(--warn)}
+.note.bad{background:var(--badbg);color:var(--bad)}
+.note.ok{background:var(--okbg);color:var(--ok)}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--tile);padding:4px;border-radius:10px}
+.seg button{border:0;background:transparent;color:var(--mute);font:600 14px var(--body);padding:10px 2px;border-radius:7px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
+label{display:block;font-size:14px;color:var(--mute);margin-bottom:4px}
+input{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--brand);outline-offset:1px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.t{background:var(--tile);border-radius:8px;padding:12px;min-width:0}
+.t b{display:block;font:700 38px/1 var(--disp);color:var(--brand)}
+.t span{font-size:14px;color:var(--mute)}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row>div{min-width:0}
+.nm{font-weight:600;overflow-wrap:anywhere}
+.sub{font-size:13px;color:var(--mute);overflow-wrap:anywhere}
+.sub a{color:var(--brand)}
+.btn{border:0;border-radius:8px;padding:9px 14px;font:600 15px var(--body);cursor:pointer;background:var(--brand);color:var(--brand-ink);white-space:nowrap}
+.btn.ghost{background:transparent;color:var(--mute);border:1px solid var(--line)}
+.btn.wide{width:100%;padding:12px}
+.btn[disabled]{opacity:.55;cursor:default}
+.pill{font-size:12px;font-weight:600;border-radius:99px;padding:3px 9px;white-space:nowrap}
+.pill.ok{background:var(--okbg);color:var(--ok)}
+.pill.no{background:var(--warnbg);color:var(--warn)}
+.pill.bad{background:var(--badbg);color:var(--bad)}
+.bar{height:10px;background:var(--tile);border-radius:6px;overflow:hidden;margin-top:5px}
+.bar i{display:block;height:100%;background:var(--brand);border-radius:6px}
+.bl{padding:8px 0}
+.bl .top{display:flex;justify-content:space-between;gap:10px}
+.empty{color:var(--mute);padding:8px 0;margin:0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:15px;max-width:90vw;z-index:20}
+.prog{height:8px;background:var(--tile);border-radius:6px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--brand)}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-top:1px solid var(--line);white-space:nowrap}
+th{font-weight:600;color:var(--mute);border-top:0}
+.cf{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.cf{grid-template-columns:1fr}}
+.fld{display:flex;flex-direction:column;gap:8px}
+.up{display:flex;align-items:center;gap:12px}
+.up .pv{flex:none;width:64px;height:64px;border-radius:10px;background:var(--tile);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--mute)}
+.up .pv img{width:100%;height:100%;object-fit:cover}
+</style>
+</head>
+<body>
+<main>
+  <header class="cand" id="hd">
+    <div class="ph" id="hph"><img id="himg" alt="" hidden><span id="hpt">Foto</span></div>
+    <div class="cn">
+      <div class="clr"><div class="lg"><img id="hlogo" alt="" hidden><span id="hlt">Logo</span></div><span class="cl">Estructura de apoyo</span></div>
+      <div class="cname" id="hname">Nombre del candidato</div>
+    </div>
+  </header>
+
+  <section id="sLoad" class="card"><p class="empty">Cargando…</p></section>
+
+  <section id="sSetup" class="card" hidden>
+    <h2>Falta conectar el servidor</h2>
+    <p class="sub" style="margin:0">Abra el archivo <b>config.js</b> y pegue la URL y la clave de su proyecto de Supabase, como indica la guía. Luego recargue esta página.</p>
+  </section>
+
+  <section id="sLogin" class="card" hidden>
+    <h2>Entrar</h2>
+    <form id="fLogin" class="fld" autocomplete="on">
+      <div><label for="lu">Usuario</label><input id="lu" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></div>
+      <div><label for="lp">Clave</label><input id="lp" type="password" autocomplete="current-password" required></div>
+      <button class="btn wide" id="lgo" type="submit">Entrar</button>
+    </form>
+    <div id="lerr" class="note bad" hidden></div>
+  </section>
+
+  <section id="sApp" hidden>
+    <div id="vCoord" class="card" hidden>
+      <div id="cwho" class="sub"></div>
+      <div class="tiles">
+        <div class="t"><b id="cmine">0</b><span>Mis seguidores</span></div>
+        <div class="t"><b id="cdate">—</b><span id="cdl">Último registro</span></div>
+      </div>
+      <div>
+        <h2>Buscar en el padrón</h2>
+        <label for="q">Nombre, apellido o cédula</label>
+        <input id="q" type="search" placeholder="Ej. Martínez" autocomplete="off">
+        <div id="res" style="margin-top:8px"></div>
+      </div>
+      <div><h2>Mis seguidores</h2><div id="mine"></div></div>
+    </div>
+
+    <div id="vAdmin" class="card" hidden>
+      <div class="seg" role="group" aria-label="Secciones">
+        <button data-tab="res" aria-pressed="true">Resumen</button>
+        <button data-tab="coo" aria-pressed="false">Coordinadores</button>
+        <button data-tab="pad" aria-pressed="false">Padrón</button>
+        <button data-tab="aju" aria-pressed="false">Ajustes</button>
+      </div>
+
+      <div id="tRes">
+        <div class="tiles">
+          <div class="t"><b id="aS">0</b><span>Seguidores registrados</span></div>
+          <div class="t"><b id="aC">0</b><span>Coordinadores activos</span></div>
+        </div>
+        <p class="sub" id="aP" style="margin:10px 0 0"></p>
+        <h2 style="margin-top:16px">Seguidores por coordinador</h2><div id="byC"></div>
+        <h2 style="margin-top:16px">Por recinto</h2><div id="byR"></div>
+        <h2 style="margin-top:16px">Últimos registros</h2><div id="last"></div>
+        <button id="rfs" class="btn ghost wide" style="margin-top:12px">Actualizar</button>
+      </div>
+
+      <div id="tCoo" hidden>
+        <h2>Añadir coordinador</h2>
+        <form id="fCoo" class="fld" autocomplete="off">
+          <div><label for="cnom">Nombre</label><input id="cnom" required></div>
+          <div class="cf">
+            <div><label for="cusr">Usuario (sin espacios)</label><input id="cusr" autocapitalize="none" autocorrect="off" spellcheck="false" required></div>
+            <div><label for="cpw">Clave (mínimo 6)</label><input id="cpw" type="text" minlength="6" required></div>
+          </div>
+          <div class="cf">
+            <div><label for="czon">Zona</label><input id="czon"></div>
+            <div><label for="ctel">Teléfono</label><input id="ctel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12"></div>
+          </div>
+          <button class="btn wide" id="cadd" type="submit">Crear coordinador</button>
+        </form>
+        <h2 style="margin-top:16px">Coordinadores</h2>
+        <div id="clist"></div>
+      </div>
+
+      <div id="tPad" hidden>
+        <h2>Padrón en el servidor</h2>
+        <p id="pcount" class="sub" style="margin:0 0 12px"></p>
+        <label for="pdf">Cargar padrón (PDF)</label>
+        <input id="pdf" type="file" accept="application/pdf">
+        <p class="sub" style="margin:8px 0 0">El PDF se lee en este aparato. Al terminar, usted revisa el resultado y decide si lo sube al servidor.</p>
+        <div id="prog" class="prog" style="margin-top:10px" hidden><i></i></div>
+        <p id="pmsg" class="sub" style="margin:8px 0 0"></p>
+        <div id="rep" hidden style="margin-top:12px">
+          <h2>Resultado de la lectura</h2>
+          <div class="tw"><table><thead><tr><th>Recinto</th><th>Colegio</th><th>Esperados</th><th>Leídos</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
+          <p class="sub" id="repn"></p>
+          <button id="up" class="btn wide">Subir al servidor</button>
+        </div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+        <button id="pdel" class="btn ghost wide">Borrar todo el padrón y los seguidores</button>
+      </div>
+
+      <div id="tAju" hidden>
+        <h2>Datos del candidato</h2>
+        <div class="fld">
+          <div><label for="anom">Nombre del candidato</label><input id="anom" maxlength="60"></div>
+          <div class="up"><div class="pv"><img id="pvf" alt="" hidden><span id="pvft">Foto</span></div>
+            <div><label for="afoto">Foto del candidato</label><input id="afoto" type="file" accept="image/*"></div></div>
+          <div class="up"><div class="pv"><img id="pvl" alt="" hidden style="object-fit:contain"><span id="pvlt">Logo</span></div>
+            <div><label for="alogo">Logo del partido</label><input id="alogo" type="file" accept="image/*"></div></div>
+          <button id="asave" class="btn wide">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <button id="out" class="btn ghost wide" style="margin-top:14px">Cerrar sesión</button>
+  </section>
+</main>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+/* Lector de páginas del padrón. items: [{s,x,y,w,h}] con y medida desde ABAJO de la página. */
+function parsePage(items,W){
+  var CED=/(\d{3}-\d{7}-\d)/;
+  // 1) unir trozos de la misma línea que estén pegados
+  var its=items.filter(function(i){return i.s&&i.s.trim()}).map(function(i){return{s:i.s.trim(),x:i.x,y:i.y,w:i.w||i.s.length*(i.h||8)*0.5,h:i.h||8}});
+  its.sort(function(a,b){return Math.abs(a.y-b.y)>2?b.y-a.y:a.x-b.x});
+  var runs=[];
+  its.forEach(function(it){
+    var l=runs[runs.length-1];
+    if(l&&Math.abs(l.y-it.y)<=2&&it.x-(l.x+l.w)<it.h*0.9&&it.x>=l.x){l.s+=(it.x-(l.x+l.w)>it.h*0.15?" ":"")+it.s;l.w=it.x+it.w-l.x}
+    else runs.push({s:it.s,x:it.x,y:it.y,w:it.w,h:it.h});
+  });
+  var anchors=runs.filter(function(r){return /^\d{3}-\d{7}-\d(\s*\|)?$/.test(r.s)});
+  var res={rec:"",colegio:"",conf:null,rat:null,mil:null,people:[],anchors:anchors.length};
+  var topY=anchors.length?Math.max.apply(null,anchors.map(function(a){return a.y})):0;
+  var hdr=anchors.length?runs.filter(function(r){return r.y>topY+6}):runs;
+  // 2) encabezado: recinto, colegio, totales
+  hdr.forEach(function(r){var m=/REC\.?:?\s*(\d+)\s+(.+)/.exec(r.s);if(m)res.rec=m[1]+" "+m[2].trim()});
+  if(!res.rec){hdr.forEach(function(r,i){if(/^REC\.?:?$/.test(r.s)){var n=hdr.filter(function(q){return Math.abs(q.y-r.y)<=2&&q.x>r.x}).sort(function(a,b){return a.x-b.x})[0];if(n)res.rec=n.s}})}
+  function below(label,rx){
+    var lb=hdr.filter(function(r){return r.s.toUpperCase().replace(/\s+/g," ")===label})[0];if(!lb)return null;
+    var cx=lb.x+lb.w/2,best=null;
+    hdr.forEach(function(r){if(r.y<lb.y&&rx.test(r.s)){var d=Math.abs(r.x+r.w/2-cx);if(d<Math.max(lb.w,r.w)&&(!best||r.y>best.y))best=r}});
+    return best?best.s:null}
+  res.colegio=below("COLEGIO",/^\d{3,5}[A-Z]?$/)||"";
+  [["conf","A CONFIRMAR"],["rat","RATIFICADOS"],["mil","MILITANTES"]].forEach(function(p){var v=below(p[1],/^\d+$/);res[p[0]]=v==null?null:+v});
+  // 3) tarjetas
+  var cols=[0,1];
+  cols.forEach(function(ci){
+    var inCol=function(r){return ci===0?r.x<W/2:r.x>=W/2};
+    var ca=anchors.filter(inCol).sort(function(a,b){return b.y-a.y});
+    ca.forEach(function(a,k){
+      var lo=k+1<ca.length?ca[k+1].y-2:-1e9;
+      var card=runs.filter(function(r){return inCol(r)&&r.y<=a.y+2&&r.y>lo});
+      var line0=card.filter(function(r){return Math.abs(r.y-a.y)<=3});
+      var est="";line0.forEach(function(r){if(/RATIFICADO/i.test(r.s))est="Ratificado";else if(/CONFIRMAR/i.test(r.s))est="A confirmar"});
+      var ord=line0.filter(function(r){return /^\d{1,6}$/.test(r.s)}).sort(function(p,q){return q.x-p.x})[0];
+      var rest=card.filter(function(r){return r.y<a.y-3&&r.x>=a.x-6}).sort(function(p,q){return q.y-p.y});
+      var nameLine=rest.length?rest.filter(function(r){return Math.abs(r.y-rest[0].y)<=3&&r.x>=a.x-6}).sort(function(p,q){return p.x-q.x}):[];
+      var nm=nameLine.map(function(r){return r.s}).join(" ").replace(/\s+/g," ").trim();
+      function line(label){
+        var lb=card.filter(function(r){return new RegExp("^"+label+"\\.?:?").test(r.s)&&r.x>=a.x-6}).sort(function(p,q){return q.y-p.y})[0];
+        if(!lb)return "";
+        var ln=card.filter(function(r){return Math.abs(r.y-lb.y)<=3&&r.x>=lb.x}).sort(function(p,q){return p.x-q.x}).map(function(r){return r.s}).join(" ");
+        var m=new RegExp(label+"\\.?\\s*:?\\s*(\\d[\\d\\- ]*\\d)","i").exec(ln);
+        return m?m[1].replace(/\D/g,""):""}
+      var cel=line("Cel"),tel=line("Tel");
+      res.people.push({ced:CED.exec(a.s)[1],nombre:nm,estado:est,cel:cel,tel:tel,orden:ord?+ord.s:null});
+    });
+  });
+  return res;
+}
+/* Junta varias páginas por recinto y colegio y compara con el total del encabezado. */
+function joinPages(pages){
+  var g={},order=[];
+  pages.forEach(function(p){
+    if(!p.people.length&&!p.colegio)return;
+    var k=p.rec+"|"+p.colegio;
+    if(!g[k]){g[k]={rec:p.rec,colegio:p.colegio,mil:p.mil,conf:p.conf,rat:p.rat,people:[],seen:{}};order.push(k)}
+    var G=g[k];if(G.mil==null)G.mil=p.mil;
+    p.people.forEach(function(q){if(!G.seen[q.ced]){G.seen[q.ced]=1;q.rec=G.rec;q.colegio=G.colegio;G.people.push(q)}});
+  });
+  return order.map(function(k){var G=g[k];delete G.seen;
+    G.rat2=G.people.filter(function(q){return q.estado==="Ratificado"}).length;
+    G.conf2=G.people.filter(function(q){return q.estado==="A confirmar"}).length;
+    G.ok=G.mil!=null&&G.mil===G.people.length&&G.people.every(function(q){return q.nombre&&q.estado});
+    return G});
+}
+
+
+</script>
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var CFG=window.APOYO_CONFIG||{};
+  var sb=null,ME=null,CONF={candidato:"",foto:"",logo:""},DOM="@estructura.app",IDLE=30*60*1000,idleT=null;
+  var NEWFOTO=null,NEWLOGO=null,TMP=null,busy=false;
+
+  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+  function toast(t){var e=$("toast");e.textContent=t;e.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(function(){e.hidden=true},2800)}
+  function fmtT(v){var d=String(v).replace(/\D/g,"").slice(0,10);return d.length>6?d.slice(0,3)+"-"+d.slice(3,6)+"-"+d.slice(6):d.length>3?d.slice(0,3)+"-"+d.slice(3):d}
+  function fmtCel(t){t=String(t||"").replace(/\D/g,"");return t.length===10?t.slice(0,3)+"-"+t.slice(3,6)+"-"+t.slice(6):t}
+  function show(id){["sLoad","sSetup","sLogin","sApp"].forEach(function(k){$(k).hidden=k!==id})}
+  function errMsg(e){var m=e&&e.message?e.message:String(e||"");if(/fetch|network|Failed/i.test(m))return "No hay conexión con el servidor. Revise el internet.";return m}
+  function userEmail(u){u=String(u).trim().toLowerCase();return u.indexOf("@")>-1?u:u.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9._-]/g,"")+DOM}
+
+  function drawHead(){
+    $("hname").textContent=CONF.candidato||"Nombre del candidato";
+    $("himg").hidden=!CONF.foto;if(CONF.foto)$("himg").src=CONF.foto;$("hpt").hidden=!!CONF.foto;
+    $("hlogo").hidden=!CONF.logo;if(CONF.logo)$("hlogo").src=CONF.logo;$("hlt").hidden=!!CONF.logo;
+  }
+  async function loadCfg(){
+    try{var r=await sb.from("config").select("*").eq("id",1).maybeSingle();if(r.data)CONF=r.data}catch(e){}
+    drawHead();
+  }
+  function resetIdle(){clearTimeout(idleT);if(ME)idleT=setTimeout(function(){sb.auth.signOut();toast("Sesión cerrada por inactividad")},IDLE)}
+  ["click","keydown","touchstart"].forEach(function(ev){document.addEventListener(ev,resetIdle,{passive:true})});
+
+  /* ---------- arranque ---------- */
+  async function boot(){
+    if(!CFG.url||!CFG.key||/PEGUE/.test(CFG.url+CFG.key)){show("sSetup");return}
+    if(typeof supabase==="undefined"){$("sLoad").innerHTML='<p class="empty">No se pudo cargar. Revise la conexión a internet y recargue.</p>';return}
+    sb=supabase.createClient(CFG.url,CFG.key);
+    await loadCfg();
+    var s=await sb.auth.getSession();
+    if(s.data&&s.data.session)await enter();else show("sLogin");
+    sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_OUT"){ME=null;clearTimeout(idleT);show("sLogin")}});
+  }
+  async function enter(){
+    var s=await sb.auth.getSession(),u=s.data&&s.data.session&&s.data.session.user;
+    if(!u){show("sLogin");return}
+    var r=await sb.from("perfiles").select("*").eq("id",u.id).maybeSingle();
+    if(r.error){$("lerr").hidden=false;$("lerr").textContent=errMsg(r.error);show("sLogin");return}
+    if(!r.data||!r.data.activo){await sb.auth.signOut();show("sLogin");$("lerr").hidden=false;$("lerr").textContent="Su cuenta no está autorizada. Hable con el administrador.";return}
+    ME=r.data;resetIdle();
+    $("vCoord").hidden=ME.rol==="admin";$("vAdmin").hidden=ME.rol!=="admin";
+    show("sApp");
+    if(ME.rol==="admin")tab("res");else{drawCoordHead();loadMine();doSearch()}
+  }
+
+  /* ---------- entrar / salir ---------- */
+  $("fLogin").onsubmit=async function(e){
+    e.preventDefault();if(busy)return;busy=true;$("lgo").disabled=true;$("lerr").hidden=true;
+    try{
+      var r=await sb.auth.signInWithPassword({email:userEmail($("lu").value),password:$("lp").value});
+      if(r.error){$("lerr").hidden=false;$("lerr").textContent=/Invalid login/i.test(r.error.message)?"Usuario o clave incorrectos.":errMsg(r.error)}
+      else{$("lp").value="";await enter()}
+    }catch(x){$("lerr").hidden=false;$("lerr").textContent=errMsg(x)}
+    busy=false;$("lgo").disabled=false;
+  };
+  $("out").onclick=function(){sb.auth.signOut()};
+
+  /* ---------- coordinador ---------- */
+  function drawCoordHead(){$("cwho").innerHTML="<b>"+esc(ME.nombre)+"</b>"+(ME.zona?" · Zona: "+esc(ME.zona):"")+(ME.telefono?" · Tel: "+esc(ME.telefono):"")}
+  async function loadMine(){
+    var r=await sb.rpc("mis_seguidores");
+    if(r.error){$("mine").innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
+    var a=r.data||[];$("cmine").textContent=a.length;
+    if(a.length){var d=new Date(a[0].creado);$("cdate").textContent=d.toLocaleDateString("es-DO",{day:"numeric",month:"short"})}else $("cdate").textContent="—";
+    $("mine").innerHTML=a.length?a.map(function(p){
+      var tel=p.celular?'<a href="tel:'+esc(p.celular)+'">'+esc(fmtCel(p.celular))+"</a>":"";
+      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:"",p.estado].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+(tel?" · "+tel:"")+'</div></div><button class="btn ghost" data-del="'+p.id+'">Quitar</button></div>'}).join(""):'<p class="empty">Todavía no ha añadido seguidores.</p>';
+  }
+  var sT=null,sSeq=0;
+  async function doSearch(){
+    var q=$("q").value.trim(),seq=++sSeq;
+    if(q.replace(/\D/g,"").length<6&&q.length<3){$("res").innerHTML='<p class="empty">Escriba al menos 3 letras, o 6 números de la cédula.</p>';return}
+    $("res").innerHTML='<p class="empty">Buscando…</p>';
+    var r=await sb.rpc("buscar_padron",{q:q});
+    if(seq!==sSeq)return;
+    if(r.error){$("res").innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
+    var a=r.data||[];
+    $("res").innerHTML=a.length?a.map(function(p){
+      var b;if(p.mio)b='<span class="pill ok">Ya es suyo</span>';else if(p.tomado_por)b='<span class="pill no">Lo tiene '+esc(p.tomado_por)+"</span>";else b='<button class="btn" data-add="'+p.id+'">Añadir</button>';
+      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:"",p.estado].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+"</div></div>"+b+"</div>"}).join(""):'<p class="empty">No aparece en el padrón.</p>';
+  }
+  $("q").oninput=function(){clearTimeout(sT);sT=setTimeout(doSearch,350)};
+
+  /* ---------- administrador ---------- */
+  function tab(t){
+    ["res","coo","pad","aju"].forEach(function(k){var id={res:"tRes",coo:"tCoo",pad:"tPad",aju:"tAju"}[k];$(id).hidden=k!==t});
+    document.querySelectorAll("[data-tab]").forEach(function(b){b.setAttribute("aria-pressed",b.getAttribute("data-tab")===t)});
+    if(t==="res"||t==="coo")loadRes();if(t==="pad")loadPadCount();if(t==="aju")drawAju();
+  }
+  function barList(names,vals){var mx=Math.max.apply(null,vals.concat([1]));return names.map(function(n,i){return '<div class="bl"><div class="top"><span>'+esc(n)+"</span><b>"+vals[i]+'</b></div><div class="bar"><i style="width:'+(vals[i]/mx*100)+'%"></i></div></div>'}).join("")||'<p class="empty">Sin datos.</p>'}
+  async function loadRes(){
+    var r=await sb.rpc("resumen");
+    if(r.error){toast(errMsg(r.error));return}
+    var d=r.data,co=d.coordinadores||[],act=co.filter(function(c){return c.activo}).length;
+    $("aS").textContent=d.seguidores;$("aC").textContent=act;
+    $("aP").textContent="Personas en el padrón: "+d.padron+(d.padron?" · Cubierto: "+(d.seguidores/d.padron*100).toFixed(1)+"%":"");
+    $("byC").innerHTML=barList(co.map(function(c){return c.nombre+(c.zona?" · "+c.zona:"")}),co.map(function(c){return c.n}));
+    var rc=d.recintos||[];$("byR").innerHTML=barList(rc.map(function(x){return x.recinto}),rc.map(function(x){return x.n}));
+    $("last").innerHTML=(d.ultimos||[]).map(function(x){var m=Math.max(1,Math.round((Date.now()-new Date(x.creado))/60000));
+      return '<div class="row"><div><div class="nm">'+esc(x.nombre)+'</div><div class="sub">'+esc(x.coord)+" · "+(m<60?"hace "+m+" min":m<1440?"hace "+Math.round(m/60)+" h":"hace "+Math.round(m/1440)+" d")+"</div></div></div>"}).join("")||'<p class="empty">Sin registros.</p>';
+    $("clist").innerHTML=co.map(function(c){
+      return '<div class="row"><div><div class="nm">'+esc(c.nombre)+'</div><div class="sub">'+esc([c.zona,c.telefono].filter(Boolean).join(" · ")||"Sin zona ni teléfono")+" · "+c.n+' seguidores</div></div>'+
+      '<button class="btn ghost" data-act="'+c.id+'" data-to="'+(c.activo?0:1)+'">'+(c.activo?"Desactivar":"Activar")+"</button></div>"}).join("")||'<p class="empty">Todavía no hay coordinadores.</p>';
+  }
+  $("rfs").onclick=loadRes;
+  $("ctel").oninput=function(){this.value=fmtT(this.value)};
+  $("fCoo").onsubmit=async function(e){
+    e.preventDefault();if(busy)return;
+    var nom=$("cnom").value.trim(),em=userEmail($("cusr").value),pw=$("cpw").value;
+    if(!nom||em===DOM||pw.length<6){toast("Complete nombre, usuario y una clave de 6 o más caracteres");return}
+    busy=true;$("cadd").disabled=true;
+    try{
+      var tmp=supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:"tmp-"+Date.now()}});
+      var s=await tmp.auth.signUp({email:em,password:pw});
+      if(s.error)throw new Error(/registered|exists/i.test(s.error.message)?"Ese usuario ya existe. Use otro nombre de usuario.":s.error.message);
+      if(!s.data||!s.data.user)throw new Error("No se pudo crear el usuario.");
+      var p=await sb.from("perfiles").insert({id:s.data.user.id,nombre:nom,zona:$("czon").value.trim(),telefono:$("ctel").value,rol:"coordinador"});
+      if(p.error)throw p.error;
+      toast("Coordinador creado. Usuario: "+$("cusr").value.trim());
+      $("fCoo").reset();loadRes();
+    }catch(x){toast(errMsg(x))}
+    busy=false;$("cadd").disabled=false;
+  };
+  async function setActivo(id,v){var r=await sb.from("perfiles").update({activo:v}).eq("id",id);if(r.error)toast(errMsg(r.error));else{toast(v?"Coordinador activado":"Coordinador desactivado");loadRes()}}
+
+  /* ---- padrón ---- */
+  async function loadPadCount(){
+    var r=await sb.from("padron").select("id",{count:"exact",head:true});
+    $("pcount").textContent=r.error?errMsg(r.error):"Personas cargadas en el servidor: "+(r.count||0);
+  }
+  function setProg(f,msg){$("prog").hidden=false;$("prog").firstChild.style.width=Math.round(f*100)+"%";$("pmsg").textContent=msg}
+  async function readPdf(file){
+    if(typeof pdfjsLib==="undefined"){$("pmsg").textContent="No se pudo cargar el lector de PDF. Revise el internet.";return}
+    $("rep").hidden=true;TMP=null;
+    try{
+      pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      var doc=await pdfjsLib.getDocument({data:await file.arrayBuffer(),isEvalSupported:false}).promise,pages=[],noText=0;
+      for(var i=1;i<=doc.numPages;i++){
+        var pg=await doc.getPage(i),vp=pg.getViewport({scale:1}),tc=await pg.getTextContent();
+        var items=tc.items.map(function(t){return{s:t.str,x:t.transform[4],y:t.transform[5],w:t.width,h:Math.abs(t.transform[3])||t.height}});
+        if(items.length<5)noText++;pages.push(parsePage(items,vp.width));
+        if(i%3===0||i===doc.numPages){setProg(i/doc.numPages,"Leyendo hoja "+i+" de "+doc.numPages+"…");await new Promise(function(r){setTimeout(r,0)})}
+      }
+      var g=joinPages(pages);
+      if(!g.length){$("pmsg").textContent="No se encontraron personas en este PDF."+(noText?" Parece no tener texto seleccionable.":"");return}
+      var tot=0,bad=0;
+      $("tb").innerHTML=g.map(function(x){tot+=x.people.length;if(!x.ok)bad++;return "<tr><td>"+esc(x.rec||"—")+"</td><td>"+esc(x.colegio||"—")+"</td><td>"+(x.mil==null?"—":x.mil)+"</td><td>"+x.people.length+'</td><td><span class="pill '+(x.ok?"ok":"bad")+'">'+(x.ok?"Completo":"Revisar")+"</span></td></tr>"}).join("");
+      $("repn").textContent=doc.numPages+" hojas leídas. "+tot+" personas en "+g.length+" colegios."+(bad?" En los colegios marcados «Revisar» la cantidad leída no coincide con el total del encabezado, o falta algún dato. Compare esos colegios con el PDF antes de subir.":" Todos los colegios coinciden con el total del encabezado.");
+      TMP=g;$("rep").hidden=false;$("pmsg").textContent="Lectura terminada. Todavía no se ha subido nada."
+    }catch(e){$("pmsg").textContent="No se pudo leer el PDF. "+errMsg(e)}
+  }
+  $("pdf").onchange=function(){if(this.files[0])readPdf(this.files[0])};
+  $("up").onclick=async function(){
+    if(!TMP||busy)return;busy=true;this.disabled=true;
+    var rows=[];TMP.forEach(function(g){g.people.forEach(function(q){rows.push({cedula:q.ced,nombre:q.nombre,estado:q.estado||"",celular:q.cel||q.tel||"",recinto:q.rec||"",colegio:q.colegio||""})})});
+    try{
+      for(var i=0;i<rows.length;i+=500){
+        var r=await sb.from("padron").upsert(rows.slice(i,i+500),{onConflict:"cedula"});
+        if(r.error)throw r.error;
+        setProg(Math.min(1,(i+500)/rows.length),"Subiendo "+Math.min(i+500,rows.length)+" de "+rows.length+"…");
+      }
+      toast("Padrón subido: "+rows.length+" personas");$("rep").hidden=true;$("prog").hidden=true;$("pmsg").textContent="";$("pdf").value="";TMP=null;loadPadCount();
+    }catch(e){$("pmsg").textContent="Falló la subida: "+errMsg(e)+". Puede intentarlo de nuevo; no se duplica nada."}
+    busy=false;this.disabled=false;
+  };
+  $("pdel").onclick=async function(){
+    if(!this.dataset.sure){this.dataset.sure=1;this.textContent="Toque otra vez para confirmar: se borra TODO";var b=this;setTimeout(function(){delete b.dataset.sure;b.textContent="Borrar todo el padrón y los seguidores"},4000);return}
+    delete this.dataset.sure;this.textContent="Borrar todo el padrón y los seguidores";
+    var r=await sb.from("padron").delete().gt("id",0);
+    if(r.error)toast(errMsg(r.error));else{toast("Padrón borrado");loadPadCount()}
+  };
+
+  /* ---- ajustes ---- */
+  function drawAju(){$("anom").value=CONF.candidato||"";NEWFOTO=NEWLOGO=null;
+    $("pvf").hidden=!CONF.foto;if(CONF.foto)$("pvf").src=CONF.foto;$("pvft").hidden=!!CONF.foto;
+    $("pvl").hidden=!CONF.logo;if(CONF.logo)$("pvl").src=CONF.logo;$("pvlt").hidden=!!CONF.logo}
+  function readImg(file,square,cb){
+    var im=new Image(),u=URL.createObjectURL(file);
+    im.onload=function(){var c=document.createElement("canvas"),x=c.getContext("2d");
+      if(square){var s=Math.min(im.width,im.height);c.width=c.height=256;x.drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,256,256);cb(c.toDataURL("image/jpeg",0.85))}
+      else{var k=Math.min(1,240/Math.max(im.width,im.height));c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);x.drawImage(im,0,0,c.width,c.height);cb(c.toDataURL("image/png"))}
+      URL.revokeObjectURL(u)};
+    im.onerror=function(){toast("No se pudo leer la imagen")};im.src=u}
+  $("afoto").onchange=function(){if(this.files[0])readImg(this.files[0],true,function(d){NEWFOTO=d;$("pvf").src=d;$("pvf").hidden=false;$("pvft").hidden=true})};
+  $("alogo").onchange=function(){if(this.files[0])readImg(this.files[0],false,function(d){NEWLOGO=d;$("pvl").src=d;$("pvl").hidden=false;$("pvlt").hidden=true})};
+  $("asave").onclick=async function(){
+    var u={candidato:$("anom").value.trim()};if(NEWFOTO)u.foto=NEWFOTO;if(NEWLOGO)u.logo=NEWLOGO;
+    var r=await sb.from("config").update(u).eq("id",1);
+    if(r.error){toast(errMsg(r.error));return}
+    Object.assign(CONF,u);drawHead();NEWFOTO=NEWLOGO=null;toast("Guardado")
+  };
+
+  /* ---------- clics ---------- */
+  document.addEventListener("click",async function(e){
+    var t=e.target,g=function(a){return t.getAttribute&&t.getAttribute(a)};
+    if(g("data-tab")){tab(g("data-tab"));return}
+    if(g("data-act")){setActivo(g("data-act"),g("data-to")==="1");return}
+    if(g("data-add")){t.disabled=true;var r=await sb.rpc("anadir_seguidor",{p_id:+g("data-add")});
+      if(r.error)toast(errMsg(r.error));else if(r.data==="ok")toast("Añadido");else if(r.data==="ya_tomado")toast("Esa persona ya la tiene otro coordinador");
+      loadMine();doSearch();return}
+    if(g("data-del")){var r2=await sb.rpc("quitar_seguidor",{p_id:+g("data-del")});if(r2.error)toast(errMsg(r2.error));else toast("Quitado de su lista");loadMine();doSearch()}
+  });
+  boot();
+})();
+
+</script>
+</body>
+</html>
