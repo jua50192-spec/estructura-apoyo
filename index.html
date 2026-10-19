@@ -118,7 +118,7 @@ th{font-weight:600;color:var(--mute);border-top:0}
     <div id="vCoord" class="card" hidden>
       <div id="cwho" class="sub"></div>
       <div class="tiles">
-        <div class="t"><b id="cmine">0</b><span>Mis seguidores</span></div>
+        <div class="t"><b id="cmine">0</b><span>Mis militantes</span></div>
         <div class="t"><b id="cdate">—</b><span id="cdl">Último registro</span></div>
       </div>
       <div>
@@ -127,7 +127,7 @@ th{font-weight:600;color:var(--mute);border-top:0}
         <input id="q" type="search" placeholder="Ej. Martínez" autocomplete="off">
         <div id="res" style="margin-top:8px"></div>
       </div>
-      <div><h2>Mis seguidores</h2><div id="mine"></div></div>
+      <div><h2>Mis militantes</h2><div id="mine"></div></div>
     </div>
 
     <div id="vAdmin" class="card" hidden>
@@ -140,11 +140,11 @@ th{font-weight:600;color:var(--mute);border-top:0}
 
       <div id="tRes">
         <div class="tiles">
-          <div class="t"><b id="aS">0</b><span>Seguidores registrados</span></div>
+          <div class="t"><b id="aS">0</b><span>Militantes registrados</span></div>
           <div class="t"><b id="aC">0</b><span>Coordinadores activos</span></div>
         </div>
         <p class="sub" id="aP" style="margin:10px 0 0"></p>
-        <h2 style="margin-top:16px">Seguidores por coordinador</h2><div id="byC"></div>
+        <h2 style="margin-top:16px">Militantes por coordinador</h2><div id="byC"></div>
         <h2 style="margin-top:16px">Por recinto</h2><div id="byR"></div>
         <h2 style="margin-top:16px">Últimos registros</h2><div id="last"></div>
         <button id="rfs" class="btn ghost wide" style="margin-top:12px">Actualizar</button>
@@ -183,7 +183,7 @@ th{font-weight:600;color:var(--mute);border-top:0}
           <button id="up" class="btn wide">Subir al servidor</button>
         </div>
         <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
-        <button id="pdel" class="btn ghost wide">Borrar todo el padrón y los seguidores</button>
+        <button id="pdel" class="btn ghost wide">Borrar todo el padrón y los militantes</button>
       </div>
 
       <div id="tAju" hidden>
@@ -346,7 +346,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(a.length){var d=new Date(a[0].creado);$("cdate").textContent=d.toLocaleDateString("es-DO",{day:"numeric",month:"short"})}else $("cdate").textContent="—";
     $("mine").innerHTML=a.length?a.map(function(p){
       var tel=p.celular?'<a href="tel:'+esc(p.celular)+'">'+esc(fmtCel(p.celular))+"</a>":"";
-      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:"",p.estado].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+(tel?" · "+tel:"")+'</div></div><button class="btn ghost" data-del="'+p.id+'">Quitar</button></div>'}).join(""):'<p class="empty">Todavía no ha añadido seguidores.</p>';
+      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:"",p.estado].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+(tel?" · "+tel:"")+'</div></div><button class="btn ghost" data-del="'+p.id+'">Quitar</button></div>'}).join(""):'<p class="empty">Todavía no ha añadido militantes.</p>';
   }
   var sT=null,sSeq=0;
   async function doSearch(){
@@ -381,7 +381,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     $("last").innerHTML=(d.ultimos||[]).map(function(x){var m=Math.max(1,Math.round((Date.now()-new Date(x.creado))/60000));
       return '<div class="row"><div><div class="nm">'+esc(x.nombre)+'</div><div class="sub">'+esc(x.coord)+" · "+(m<60?"hace "+m+" min":m<1440?"hace "+Math.round(m/60)+" h":"hace "+Math.round(m/1440)+" d")+"</div></div></div>"}).join("")||'<p class="empty">Sin registros.</p>';
     $("clist").innerHTML=co.map(function(c){
-      return '<div class="row"><div><div class="nm">'+esc(c.nombre)+'</div><div class="sub">'+esc([c.zona,c.telefono].filter(Boolean).join(" · ")||"Sin zona ni teléfono")+" · "+c.n+' seguidores</div></div>'+
+      return '<div class="row"><div><div class="nm">'+esc(c.nombre)+'</div><div class="sub">'+esc([c.zona,c.telefono].filter(Boolean).join(" · ")||"Sin zona ni teléfono")+" · "+c.n+' militantes</div></div>'+
       '<button class="btn ghost" data-act="'+c.id+'" data-to="'+(c.activo?0:1)+'">'+(c.activo?"Desactivar":"Activar")+"</button></div>"}).join("")||'<p class="empty">Todavía no hay coordinadores.</p>';
   }
   $("rfs").onclick=loadRes;
@@ -446,8 +446,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     busy=false;this.disabled=false;
   };
   $("pdel").onclick=async function(){
-    if(!this.dataset.sure){this.dataset.sure=1;this.textContent="Toque otra vez para confirmar: se borra TODO";var b=this;setTimeout(function(){delete b.dataset.sure;b.textContent="Borrar todo el padrón y los seguidores"},4000);return}
-    delete this.dataset.sure;this.textContent="Borrar todo el padrón y los seguidores";
+    if(!this.dataset.sure){this.dataset.sure=1;this.textContent="Toque otra vez para confirmar: se borra TODO";var b=this;setTimeout(function(){delete b.dataset.sure;b.textContent="Borrar todo el padrón y los militantes"},4000);return}
+    delete this.dataset.sure;this.textContent="Borrar todo el padrón y los militantes";
     var r=await sb.from("padron").delete().gt("id",0);
     if(r.error)toast(errMsg(r.error));else{toast("Padrón borrado");loadPadCount()}
   };
