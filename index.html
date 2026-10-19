@@ -413,7 +413,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(!keep&&OPEN===id){box.hidden=true;OPEN=null;return}
     if(OPEN&&OPEN!==id){var o=$("cd-"+OPEN);if(o)o.hidden=true}
     OPEN=id;var c=COO[id];box.hidden=false;
-    box.innerHTML='<form class="fld" data-edit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(c.nombre)+'" required></div><div class="cf"><div><label>Zona</label><input name="z" value="'+esc(c.zona||"")+'"></div><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'"></div></div><button class="btn wide" type="submit">Guardar cambios</button></form><h3 class="mh">Militantes de este coordinador</h3><div id="ml-'+id+'"><p class="empty">Cargando…</p></div>';
+    box.innerHTML='<form class="fld" data-edit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(c.nombre)+'" required></div><div class="cf"><div><label>Zona</label><input name="z" value="'+esc(c.zona||"")+'"></div><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'"></div></div><button class="btn wide" type="submit">Guardar cambios</button></form><h3 class="mh">Restablecer clave</h3><form class="fld" data-reset="'+id+'" autocomplete="off"><div><label>Clave nueva (mínimo 6; puede ser su cédula sin guiones)</label><input name="k" type="text" minlength="6" required autocapitalize="none" autocomplete="off"></div><button class="btn wide" type="submit">Poner esta clave</button></form><h3 class="mh">Militantes de este coordinador</h3><div id="ml-'+id+'"><p class="empty">Cargando…</p></div>';
     var r=await sb.from("seguidores").select("padron_id,creado,padron(nombre,cedula,recinto,colegio,celular)").eq("coord_id",id).order("creado",{ascending:false});
     var ml=$("ml-"+id);if(!ml)return;
     if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
@@ -527,7 +527,14 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   });
   document.addEventListener("input",function(e){var t=e.target;if(t.name==="t"&&t.closest("[data-edit]"))t.value=fmtT(t.value)});
   document.addEventListener("submit",async function(e){
-    var f=e.target;if(!f.getAttribute||!f.getAttribute("data-edit"))return;
+    var f=e.target;
+    if(f.getAttribute&&f.getAttribute("data-reset")){
+      e.preventDefault();var rid=f.getAttribute("data-reset"),k=f.elements.k.value;
+      if(k.length<6){toast("La clave debe tener al menos 6 caracteres");return}
+      var rr=await sb.rpc("admin_reset_clave",{p_id:rid,p_clave:k});
+      if(rr.error){toast(/Could not find|admin_reset/i.test(rr.error.message||"")?"Falta instalar la función en Supabase (vea las instrucciones)":errMsg(rr.error));return}
+      f.reset();toast("Clave cambiada. Nueva clave: "+k);return}
+    if(!f.getAttribute||!f.getAttribute("data-edit"))return;
     e.preventDefault();var id=f.getAttribute("data-edit"),n=f.elements.n.value.trim();
     if(!n){toast("Escriba el nombre");return}
     var r=await sb.from("perfiles").update({nombre:n,zona:f.elements.z.value.trim(),telefono:f.elements.t.value}).eq("id",id);
