@@ -130,6 +130,14 @@ th{font-weight:600;color:var(--mute);border-top:0}
         <label for="q">Nombre, apellido o cédula</label>
         <input id="q" type="search" placeholder="Ej. Martínez" autocomplete="off">
         <div id="res" style="margin-top:8px"></div>
+        <button id="mnb" class="btn ghost wide" style="margin-top:8px">¿No está en el padrón? Añadir a mano</button>
+        <form id="fMan" class="fld" hidden autocomplete="off" style="margin-top:8px">
+          <div><label for="mnom">Nombre completo</label><input id="mnom" required></div>
+          <div><label for="mtel">Teléfono</label><input id="mtel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12" required></div>
+          <div><label for="mced">Cédula (opcional)</label><input id="mced" inputmode="numeric" placeholder="000-0000000-0" maxlength="13"></div>
+          <div><label for="mrec">Sector o lugar (opcional)</label><input id="mrec"></div>
+          <button class="btn wide" id="mgo" type="submit">Añadir militante</button>
+        </form>
       </div>
       <div><h2>Mis militantes</h2><div id="mine"></div></div>
     </div>
@@ -345,6 +353,24 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       else{$("lp").value="";await enter()}
     }catch(x){$("lerr").hidden=false;$("lerr").textContent=errMsg(x)}
     busy=false;$("lgo").disabled=false;
+  };
+  $("mnb").onclick=function(){var f=$("fMan");f.hidden=!f.hidden;if(!f.hidden)$("mnom").focus()};
+  $("mtel").oninput=function(){this.value=fmtT(this.value)};
+  $("mced").oninput=function(){this.value=fmtC(this.value)};
+  $("fMan").onsubmit=async function(e){
+    e.preventDefault();if(busy)return;busy=true;$("mgo").disabled=true;
+    try{
+      var r=await sb.rpc("anadir_manual",{p_nombre:$("mnom").value,p_cedula:$("mced").value,p_celular:$("mtel").value,p_recinto:$("mrec").value});
+      if(r.error)throw r.error;
+      var d=r.data;
+      if(d==="padron:ya_tomado")toast("Esa cédula ya está en el padrón y la tiene otro coordinador");
+      else if(d==="padron:ya_suyo")toast("Esa persona ya está en su lista");
+      else if(d==="padron:ok")toast("Esa cédula estaba en el padrón. Añadido a su lista");
+      else toast("Militante añadido");
+      if(d==="ok"||d==="padron:ok"){$("fMan").reset();$("fMan").hidden=true}
+      loadMine();
+    }catch(x){toast(/anadir_manual/i.test(x.message||"")?"Falta instalar la función en Supabase":errMsg(x))}
+    busy=false;$("mgo").disabled=false;
   };
   $("pwb").onclick=function(){var f=$("fPw");f.hidden=!f.hidden;if(!f.hidden)$("pw1").focus()};
   $("fPw").onsubmit=async function(e){
