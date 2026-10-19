@@ -154,9 +154,10 @@ th{font-weight:600;color:var(--mute);border-top:0}
         <h2>Añadir coordinador</h2>
         <form id="fCoo" class="fld" autocomplete="off">
           <div><label for="cnom">Nombre</label><input id="cnom" required></div>
+          <div><label for="ced">Cédula (se usa como clave; no se guarda)</label><input id="ced" inputmode="numeric" placeholder="000-0000000-0" maxlength="13"></div>
           <div class="cf">
             <div><label for="cusr">Usuario (sin espacios)</label><input id="cusr" autocapitalize="none" autocorrect="off" spellcheck="false" required></div>
-            <div><label for="cpw">Clave (mínimo 6)</label><input id="cpw" type="text" minlength="6" required></div>
+            <div><label for="cpw">Clave (se llena con la cédula)</label><input id="cpw" type="text" minlength="6" required></div>
           </div>
           <div class="cf">
             <div><label for="czon">Zona</label><input id="czon"></div>
@@ -199,7 +200,13 @@ th{font-weight:600;color:var(--mute);border-top:0}
       </div>
     </div>
 
-    <button id="out" class="btn ghost wide" style="margin-top:14px">Cerrar sesión</button>
+    <button id="pwb" class="btn ghost wide" style="margin-top:14px">Cambiar mi clave</button>
+    <form id="fPw" class="card" hidden style="margin-top:10px" autocomplete="off">
+      <div><label for="pw1">Clave nueva (mínimo 6)</label><input id="pw1" type="password" minlength="6" autocomplete="new-password" required></div>
+      <div><label for="pw2">Repita la clave nueva</label><input id="pw2" type="password" minlength="6" autocomplete="new-password" required></div>
+      <button class="btn wide" id="pws" type="submit">Guardar clave</button>
+    </form>
+    <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 </main>
 <div id="toast" class="toast" hidden></div>
@@ -335,6 +342,16 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     }catch(x){$("lerr").hidden=false;$("lerr").textContent=errMsg(x)}
     busy=false;$("lgo").disabled=false;
   };
+  $("pwb").onclick=function(){var f=$("fPw");f.hidden=!f.hidden;if(!f.hidden)$("pw1").focus()};
+  $("fPw").onsubmit=async function(e){
+    e.preventDefault();var a=$("pw1").value,b=$("pw2").value;
+    if(a.length<6){toast("La clave debe tener al menos 6 caracteres");return}
+    if(a!==b){toast("Las dos claves no coinciden");return}
+    $("pws").disabled=true;
+    try{var r=await sb.auth.updateUser({password:a});if(r.error)throw r.error;toast("Clave cambiada. Úsela la próxima vez que entre.");$("fPw").reset();$("fPw").hidden=true}
+    catch(x){toast(/different|same/i.test(x.message||"")?"La clave nueva debe ser distinta a la actual":errMsg(x))}
+    $("pws").disabled=false;
+  };
   $("out").onclick=function(){sb.auth.signOut()};
 
   /* ---------- coordinador ---------- */
@@ -385,6 +402,11 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       '<button class="btn ghost" data-act="'+c.id+'" data-to="'+(c.activo?0:1)+'">'+(c.activo?"Desactivar":"Activar")+"</button></div>"}).join("")||'<p class="empty">Todavía no hay coordinadores.</p>';
   }
   $("rfs").onclick=loadRes;
+  function fmtC(v){var d=String(v).replace(/\D/g,"").slice(0,11);return d.length>10?d.slice(0,3)+"-"+d.slice(3,10)+"-"+d.slice(10):d.length>3?d.slice(0,3)+"-"+d.slice(3):d}
+  function sugUser(){var u=$("cusr");if(u.dataset.man)return;var w=$("cnom").value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").split(/\s+/).filter(Boolean);u.value=w.length>1?w[0]+"."+w[w.length-1]:(w[0]||"")}
+  $("cusr").oninput=function(){this.dataset.man=this.value?1:""};
+  $("cnom").oninput=sugUser;
+  $("ced").oninput=function(){this.value=fmtC(this.value);$("cpw").value=this.value.replace(/\D/g,"")};
   $("ctel").oninput=function(){this.value=fmtT(this.value)};
   $("fCoo").onsubmit=async function(e){
     e.preventDefault();if(busy)return;
@@ -399,7 +421,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       var p=await sb.from("perfiles").insert({id:s.data.user.id,nombre:nom,zona:$("czon").value.trim(),telefono:$("ctel").value,rol:"coordinador"});
       if(p.error)throw p.error;
       toast("Coordinador creado. Usuario: "+$("cusr").value.trim());
-      $("fCoo").reset();loadRes();
+      $("fCoo").reset();$("cusr").dataset.man="";loadRes();
     }catch(x){toast(errMsg(x))}
     busy=false;$("cadd").disabled=false;
   };
