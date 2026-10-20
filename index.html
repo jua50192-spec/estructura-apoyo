@@ -135,7 +135,8 @@ th{font-weight:600;color:var(--mute);border-top:0}
         <form id="fMan" class="fld" hidden autocomplete="off" style="margin-top:8px">
           <div><label for="mnom">Nombre completo</label><input id="mnom" required></div>
           <div><label for="mtel">Teléfono</label><input id="mtel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12" required></div>
-          <div><label for="mced">Cédula (opcional)</label><input id="mced" inputmode="numeric" placeholder="000-0000000-0" maxlength="13"></div>
+          <div><label for="mced">Cédula (opcional: si está en el padrón se completa sola)</label><input id="mced" inputmode="numeric" placeholder="000-0000000-0" maxlength="13"></div>
+          <div id="mres"></div>
           <div><label for="mrec">Sector o lugar (opcional)</label><input id="mrec"></div>
           <button class="btn wide" id="mgo" type="submit">Añadir militante</button>
         </form>
@@ -235,7 +236,7 @@ th{font-weight:600;color:var(--mute);border-top:0}
       <div><label for="pw2">Repita la clave nueva</label><input id="pw2" type="password" minlength="6" autocomplete="new-password" required></div>
       <button class="btn wide" id="pws" type="submit">Guardar clave</button>
     </form>
-    <p class="sub" id="ver" style="text-align:center;margin:12px 0 2px">Versión 20-oct-2026 (7)</p>
+    <p class="sub" id="ver" style="text-align:center;margin:12px 0 2px">Versión 20-oct-2026 (8)</p>
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 </main>
@@ -376,7 +377,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   };
   $("mnb").onclick=function(){var f=$("fMan");f.hidden=!f.hidden;if(!f.hidden)$("mnom").focus()};
   $("mtel").oninput=function(){this.value=fmtT(this.value)};
-  $("mced").oninput=function(){this.value=fmtC(this.value)};
+  $("mced").oninput=function(){this.value=fmtC(this.value);lookCed(this.value,$("mres"),true)};
   $("fMan").onsubmit=async function(e){
     e.preventDefault();if(busy)return;busy=true;$("mgo").disabled=true;
     try{
@@ -397,7 +398,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var r=await sb.rpc("datos_formulario",{p_coord:id});
     if(r.error){toast(/datos_formulario/i.test(r.error.message||"")?"Falta instalar la función en Supabase":errMsg(r.error));return}
     var d=r.data||{},R=d.resp||{},F=d.filas||[],n=Math.max(parseInt(d.meta,10)||10,F.length),org=(CONF.organizacion||"Estructura de apoyo").toUpperCase();
-    var rows="";for(var i=0;i<n;i++){var x=F[i]||{};rows+="<tr><td class=c>"+String(i+1).padStart(2,"0")+"</td><td>"+esc(x.nombre||"")+(x.apodo?" («"+esc(x.apodo)+"»)":"")+"</td><td>"+esc(fmtCed11(x.cedula))+"</td><td>"+esc(x.celular?fmtCel(x.celular):"")+"</td><td>"+esc(x.direccion||"")+"</td><td></td></tr>"}
+    var rows="";for(var i=0;i<n;i++){var x=F[i]||{};rows+="<tr><td class=c>"+String(i+1).padStart(2,"0")+"</td><td>"+esc(x.nombre||"")+(x.apodo?" («"+esc(x.apodo)+"»)":"")+"</td><td>"+esc(fmtCed11(x.cedula))+"</td><td>"+esc(x.celular?fmtCel(x.celular):"")+"</td><td>"+esc(x.direccion||"")+"</td><td>"+esc([x.recinto&&x.recinto!=="Fuera del padrón"?x.recinto:"",x.colegio].filter(Boolean).join(" / "))+"</td></tr>"}
     var h='<!doctype html><html lang="es"><head><meta charset="utf-8"><title>'+esc(CONF.candidato||'Formulario de comité afectivo')+'</title><style>@page{size:A4;margin:12mm}*{box-sizing:border-box}body{font:12px/1.35 Arial,Helvetica,sans-serif;color:#111;margin:0}.top{display:flex;align-items:center;gap:12px;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:8px}.top img{height:54px;width:54px;object-fit:contain}.top h1{font-size:16px;margin:0}.top h2{font-size:13px;margin:2px 0 0;font-weight:700}.top .cand{margin-left:auto;text-align:right;font-size:17px;font-weight:700;max-width:45%}.sub{font-size:11px;color:#333;margin:4px 0 8px}h3{font-size:12px;margin:10px 0 4px;background:#e6e6e6;padding:3px 6px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #333;padding:4px 5px;vertical-align:middle}th{background:#f0f0f0;font-size:11px}.rows td{height:'+(n>12?"9":"11")+'mm}.c{text-align:center;width:8mm}.g td{height:8mm}.cert{margin:10px 0 4px;font-size:11px}.sg{display:flex;gap:24px;margin-top:16mm}.sg div{flex:1;border-top:1px solid #111;padding-top:3px;font-size:11px}.ft{margin-top:8px;font-size:10px;color:#444;display:flex;justify-content:space-between}</style></head><body>'+
     '<div class="top">'+(CONF.logo?'<img src="'+esc(CONF.logo)+'" alt="">':"")+'<div><h1>'+esc(org)+'</h1><h2>FORMULARIO DE COMITÉ AFECTIVO - '+n+' INSCRIPCIONES</h2></div>'+(CONF.candidato?'<div class="cand">'+esc(CONF.candidato)+'</div>':"")+'</div>'+
     '<div class="sub">Registro individual de '+n+' personas inscritas por cada miembro responsable. Complete una fila por cada inscripción y registre los datos de contacto completos.</div>'+
@@ -477,12 +478,26 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       var tel=p.celular?'<a href="tel:'+esc(p.celular)+'">'+esc(fmtCel(p.celular))+"</a>":'<span style="color:var(--warn)">Sin teléfono</span>';var ced=p.cedula||"Sin cédula";
       return '<div class="cw"><div class="row"><div><div class="nm">'+String(ix+1).padStart(2,"0")+' · '+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:"",p.estado].filter(Boolean).join(" · "))+"<br>"+esc(ced)+" · "+tel+(p.apodo?" · «"+esc(p.apodo)+"»":"")+(p.direccion?"<br>"+esc(p.direccion):"")+'</div></div><div class="acts"><button class="btn ghost" data-tel="'+p.id+'">Datos</button><button class="btn ghost" data-del="'+p.id+'">Quitar</button></div></div>'+
       '<div class="cdet" id="te-'+p.id+'" hidden><form class="fld" data-telf="'+p.id+'" autocomplete="off"><div><label>Teléfono actualizado</label><input name="t" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12" value="'+esc(p.celular?fmtCel(p.celular):"")+'" required></div><div><label>Apodo (opcional)</label><input name="a" maxlength="60" value="'+esc(p.apodo||"")+'"></div><div><label>Dirección</label><input name="d" maxlength="200" value="'+esc(p.direccion||"")+'"></div><button class="btn wide" type="submit">Guardar datos</button></form></div></div>'}).join("");
-    for(var k=a.length;k<tot;k++)html+='<div class="cw"><div class="row slot"><div><div class="nm" style="color:var(--mute)">'+String(k+1).padStart(2,"0")+' · Disponible</div><div class="sub">Busque en el padrón o añada a mano</div></div><button class="btn ghost" data-slot="1">Añadir</button></div></div>';
+    for(var k=a.length;k<tot;k++)html+='<div class="cw"><div class="row slot"><div style="flex:1"><div class="nm" style="color:var(--mute)">'+String(k+1).padStart(2,"0")+' · Disponible</div><input data-cs="'+k+'" inputmode="numeric" placeholder="Escriba la cédula: 000-0000000-0" maxlength="13" autocomplete="off" style="margin-top:6px"></div></div><div id="cs-'+k+'"></div></div>';
     $("mine").innerHTML=html;
     if(ME&&ME.rol!=="admin"){var mt=ME.meta||CONF.meta||10;if(ME.rol==="jefe")$("cmine").textContent=a.length+"/"+mt}
     if(PENDTEL){var bx=$("te-"+PENDTEL);if(bx){bx.hidden=false;var ip=bx.querySelector("input");if(ip){ip.focus();bx.scrollIntoView({block:"center"})}}PENDTEL=null}
   }
   var PENDTEL=null;
+  function cedCard(p){
+    var b;if(p.mio)b='<span class="pill ok">Ya es suyo</span>';else if(p.tomado_por)b='<span class="pill no">Lo tiene '+esc(p.tomado_por)+"</span>";else b='<button class="btn" data-add="'+p.id+'">Añadir a mi lista</button>';
+    return '<div class="row" style="background:var(--tile);border-radius:8px;padding:8px 10px;margin:6px 0"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:"",p.estado].filter(Boolean).join(" · "))+"<br>"+esc(fmtCed11(p.cedula))+"</div></div>"+b+"</div>"}
+  async function lookCed(val,out,manual){
+    var d=String(val).replace(/\D/g,"");if(d.length<11){out.innerHTML="";return}
+    out.innerHTML='<p class="empty">Buscando…</p>';
+    var r=await sb.rpc("buscar_cedula",{p_ced:d});
+    if(r.error){out.innerHTML='<p class="empty">'+esc(/buscar_cedula/i.test(r.error.message||"")?"Falta instalar la función en Supabase":errMsg(r.error))+"</p>";return}
+    var p=(r.data||[])[0];
+    if(!p){out.innerHTML='<p class="empty">Esa cédula no está en el padrón.</p>'+(manual?"":'<button class="btn ghost wide" data-manced="'+fmtC(d)+'">Añadir a mano</button>');return}
+    out.innerHTML=cedCard(p);
+    if(manual){if(!$("mnom").value)$("mnom").value=p.nombre;if(!$("mrec").value)$("mrec").value=[p.recinto,p.colegio].filter(Boolean).join(" ")}
+  }
+  document.addEventListener("input",function(e){var t=e.target;if(t.getAttribute&&t.getAttribute("data-cs")!=null){t.value=fmtC(t.value);lookCed(t.value,$("cs-"+t.getAttribute("data-cs")),false)}});
   var sT=null,sSeq=0;
   async function doSearch(){
     var q=$("q").value.trim(),seq=++sSeq;
@@ -635,7 +650,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if((g("data-act")||g("data-cact"))&&g("data-to")==="0"&&!confirm("¿Desea desactivar a "+nom(t)+"?\n\nNo podrá entrar a la app hasta que la active de nuevo."))return;
     if(g("data-perm")&&g("data-to")==="0"&&!confirm("¿Desea quitar el permiso para formar comités?"))return;
     if(g("data-tab")){tab(g("data-tab"));return}
-    if(g("data-slot")){var qq=$("q");qq.scrollIntoView({block:"center"});qq.focus();return}
+    if(g("data-manced")){var mf=$("fMan");mf.hidden=false;$("mced").value=g("data-manced");mf.scrollIntoView({block:"center"});$("mnom").focus();return}
     if(g("data-print")){imprimirForm(g("data-print"));return}
     if(t.id==="pmy"){imprimirForm(ME.id);return}
     if(g("data-perm")){var pr=await sb.from("perfiles").update({puede_comites:g("data-to")==="1"}).eq("id",g("data-perm"));if(pr.error)toast(errMsg(pr.error));else{toast(g("data-to")==="1"?"Permiso otorgado":"Permiso retirado");loadRes()}return}
