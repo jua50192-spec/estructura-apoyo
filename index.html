@@ -154,7 +154,8 @@ th{font-weight:600;color:var(--mute);border-top:0}
             <div><label for="jzon">Zona o sector</label><input id="jzon"></div>
             <div><label for="jtel">Teléfono</label><input id="jtel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12"></div>
           </div>
-          <div><label for="jrec">Recinto / colegio</label><input id="jrec"></div>
+          <div><label for="jrec">Recinto (nombre)</label><input id="jrec"></div>
+          <div><label for="jcol">Colegio (número)</label><input id="jcol" inputmode="numeric"></div>
           <button class="btn wide" id="jgo" type="submit">Crear jefe de comité</button>
         </form>
         <div id="jlist" style="margin-top:8px"></div>
@@ -190,7 +191,8 @@ th{font-weight:600;color:var(--mute);border-top:0}
             <div><label for="czon">Zona</label><input id="czon"></div>
             <div><label for="ctel">Teléfono</label><input id="ctel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12"></div>
           </div>
-          <div><label for="crec">Recinto / colegio</label><input id="crec"></div>
+          <div><label for="crec">Recinto (nombre)</label><input id="crec"></div>
+          <div><label for="ccol">Colegio (número)</label><input id="ccol" inputmode="numeric"></div>
           <button class="btn wide" id="cadd" type="submit">Crear coordinador</button>
         </form>
         <h2 style="margin-top:16px">Coordinadores</h2>
@@ -236,7 +238,7 @@ th{font-weight:600;color:var(--mute);border-top:0}
       <div><label for="pw2">Repita la clave nueva</label><input id="pw2" type="password" minlength="6" autocomplete="new-password" required></div>
       <button class="btn wide" id="pws" type="submit">Guardar clave</button>
     </form>
-    <p class="sub" id="ver" style="text-align:center;margin:12px 0 2px">Versión 20-oct-2026 (8)</p>
+    <p class="sub" id="ver" style="text-align:center;margin:12px 0 2px">Versión 20-oct-2026 (9)</p>
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 </main>
@@ -401,8 +403,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var rows="";for(var i=0;i<n;i++){var x=F[i]||{};rows+="<tr><td class=c>"+String(i+1).padStart(2,"0")+"</td><td>"+esc(x.nombre||"")+(x.apodo?" («"+esc(x.apodo)+"»)":"")+"</td><td>"+esc(fmtCed11(x.cedula))+"</td><td>"+esc(x.celular?fmtCel(x.celular):"")+"</td><td>"+esc(x.direccion||"")+"</td><td>"+esc([x.recinto&&x.recinto!=="Fuera del padrón"?x.recinto:"",x.colegio].filter(Boolean).join(" / "))+"</td></tr>"}
     var h='<!doctype html><html lang="es"><head><meta charset="utf-8"><title>'+esc(CONF.candidato||'Formulario de comité afectivo')+'</title><style>@page{size:A4;margin:12mm}*{box-sizing:border-box}body{font:12px/1.35 Arial,Helvetica,sans-serif;color:#111;margin:0}.top{display:flex;align-items:center;gap:12px;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:8px}.top img{height:54px;width:54px;object-fit:contain}.top h1{font-size:16px;margin:0}.top h2{font-size:13px;margin:2px 0 0;font-weight:700}.top .cand{margin-left:auto;text-align:right;font-size:17px;font-weight:700;max-width:45%}.sub{font-size:11px;color:#333;margin:4px 0 8px}h3{font-size:12px;margin:10px 0 4px;background:#e6e6e6;padding:3px 6px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #333;padding:4px 5px;vertical-align:middle}th{background:#f0f0f0;font-size:11px}.rows td{height:'+(n>12?"9":"11")+'mm}.c{text-align:center;width:8mm}.g td{height:8mm}.cert{margin:10px 0 4px;font-size:11px}.sg{display:flex;gap:24px;margin-top:16mm}.sg div{flex:1;border-top:1px solid #111;padding-top:3px;font-size:11px}.ft{margin-top:8px;font-size:10px;color:#444;display:flex;justify-content:space-between}</style></head><body>'+
     '<div class="top">'+(CONF.logo?'<img src="'+esc(CONF.logo)+'" alt="">':"")+'<div><h1>'+esc(org)+'</h1><h2>FORMULARIO DE COMITÉ AFECTIVO - '+n+' INSCRIPCIONES</h2></div>'+(CONF.candidato?'<div class="cand">'+esc(CONF.candidato)+'</div>':"")+'</div>'+
-    '<div class="sub">Registro individual de '+n+' personas inscritas por cada miembro responsable. Complete una fila por cada inscripción y registre los datos de contacto completos.</div>'+
-    '<h3>DATOS DEL MIEMBRO RESPONSABLE</h3><table class="g"><tr><td colspan="2"><b>Nombre completo del miembro responsable:</b> '+esc(R.nombre)+'</td><td><b>Cédula:</b> '+esc(fmtCed11(R.cedula))+'</td></tr><tr><td colspan="3"><b>Teléfono / WhatsApp:</b> '+esc(R.telefono)+'</td></tr><tr><td colspan="3"><b>Recinto / colegio:</b> '+esc(R.recinto)+'</td></tr></table>'+
+    '<div class="sub">Registro individual de '+n+' personas inscritas por cada enlace responsable. Complete una fila por cada inscripción y registre los datos de contacto completos.</div>'+
+    '<h3>DATOS DEL ENLACE</h3><table class="g"><tr><td colspan="2"><b>Nombre completo del Enlace responsable:</b> '+esc(R.nombre)+'</td><td><b>Cédula:</b> '+esc(fmtCed11(R.cedula))+'</td></tr><tr><td colspan="3"><b>Teléfono / WhatsApp:</b> '+esc(R.telefono)+'</td></tr><tr><td colspan="2"><b>Recinto:</b> '+esc(recSplit(R.recinto)[0])+'</td><td><b>Colegio:</b> '+esc(recSplit(R.recinto)[1])+'</td></tr></table>'+
     '<h3>REGISTRO DE INSCRIPCIONES - META: '+n+' PERSONAS</h3><table class="rows"><tr><th>No.</th><th>Nombre y apellidos (Apodo)</th><th>Cédula</th><th>Teléfono / WhatsApp</th><th>Dirección</th><th style="width:30mm">Recinto Electoral No.</th></tr>'+rows+'</table>'+
     '<div class="cert" style="margin-top:12px">Certifico que las '+n+' personas registradas fueron inscritas con sus datos completos y autorizan su contacto para fines organizativos.</div></body></html>';
     var fr=document.createElement("iframe");fr.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";document.body.appendChild(fr);
@@ -412,7 +414,9 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   var CJ={},COPEN=null;
   function jefeArgs(id,v,activo){var c=CJ[id]||{};function w(k){return v[k]!=null?v[k]:(c[k]||"")}
     return{p_id:id,p_nombre:w("nombre"),p_zona:w("zona"),p_telefono:w("telefono"),p_activo:activo!=null?activo:c.activo,p_cedula:w("cedula"),p_cargo:"",p_provincia:"",p_municipio:"",p_recinto:w("recinto")}}
-  function datosHtml(c,pre){return '<div><label>Nombre</label><input name="n" value="'+esc(c.nombre)+'" required></div><div><label>Cédula</label><input name="ce" inputmode="numeric" maxlength="13" value="'+esc(c.cedula||"")+'"></div><div class="cf"><div><label>Zona / sector</label><input name="z" value="'+esc(c.zona||"")+'"></div><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'"></div></div><div><label>Recinto / colegio</label><input name="re" value="'+esc(c.recinto||"")+'"></div>'}
+  function recSplit(s){var p=String(s||"").split("|");return [(p[0]||"").trim(),(p[1]||"").trim()]}
+  function recJoin(r,c){r=(r||"").trim();c=(c||"").trim();return c?r+" | "+c:r}
+  function datosHtml(c,pre){return '<div><label>Nombre</label><input name="n" value="'+esc(c.nombre)+'" required></div><div><label>Cédula</label><input name="ce" inputmode="numeric" maxlength="13" value="'+esc(c.cedula||"")+'"></div><div class="cf"><div><label>Zona / sector</label><input name="z" value="'+esc(c.zona||"")+'"></div><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'"></div></div><div class="cf"><div><label>Recinto (nombre)</label><input name="re" value="'+esc(recSplit(c.recinto)[0])+'"></div><div><label>Colegio (número)</label><input name="co" value="'+esc(recSplit(c.recinto)[1])+'"></div></div>'}
   async function loadComites(){
     var r=await sb.rpc("mis_comites");if(r.error){$("jlist").innerHTML='<p class="empty">'+esc(/mis_comites/i.test(r.error.message||"")?"Falta instalar la función de comités en Supabase":errMsg(r.error))+"</p>";return}
     var a=r.data||[];CJ={};a.forEach(function(c){CJ[c.id]=c});
@@ -446,7 +450,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       var sg=await tmp.auth.signUp({email:em,password:pw});
       if(sg.error)throw new Error(/registered|exists/i.test(sg.error.message)?"Ese usuario ya existe. Use otro nombre de usuario.":sg.error.message);
       if(!sg.data||!sg.data.user)throw new Error("No se pudo crear el usuario.");
-      var pr=await sb.rpc("crear_jefe",{p_id:sg.data.user.id,p_nombre:nom,p_zona:$("jzon").value.trim(),p_telefono:$("jtel").value,p_cedula:$("jced").value.trim(),p_recinto:$("jrec").value.trim()});
+      var pr=await sb.rpc("crear_jefe",{p_id:sg.data.user.id,p_nombre:nom,p_zona:$("jzon").value.trim(),p_telefono:$("jtel").value,p_cedula:$("jced").value.trim(),p_recinto:recJoin($("jrec").value,$("jcol").value)});
       if(pr.error)throw pr.error;
       toast("Jefe de comité creado. Usuario: "+nom+" · Clave: su cédula");
       $("fJefe").reset();$("fJefe").hidden=true;loadComites();
@@ -466,7 +470,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   $("out").onclick=function(){sb.auth.signOut()};
 
   /* ---------- coordinador ---------- */
-  function drawCoordHead(){$("cwho").innerHTML="<b>"+esc(ME.nombre)+"</b>"+(ME.cedula?" · Cédula: "+esc(fmtCed11(ME.cedula)):"")+(ME.telefono?" · Tel: "+esc(ME.telefono):"")+(ME.zona?"<br>Zona / sector: "+esc(ME.zona):"")+(ME.recinto?(ME.zona?" · ":"<br>")+"Recinto / colegio: "+esc(ME.recinto):"")}
+  function drawCoordHead(){$("cwho").innerHTML="<b>"+esc(ME.nombre)+"</b>"+(ME.cedula?" · Cédula: "+esc(fmtCed11(ME.cedula)):"")+(ME.telefono?" · Tel: "+esc(ME.telefono):"")+(ME.zona?"<br>Zona / sector: "+esc(ME.zona):"")+(ME.recinto?(ME.zona?" · ":"<br>")+"Recinto: "+esc(recSplit(ME.recinto)[0])+(recSplit(ME.recinto)[1]?" · Colegio: "+esc(recSplit(ME.recinto)[1]):""):"")}
   async function loadMine(){
     var r=await sb.rpc("mis_seguidores");
     if(r.error){$("mine").innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
@@ -566,7 +570,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       var s=await tmp.auth.signUp({email:em,password:pw});
       if(s.error)throw new Error(/registered|exists/i.test(s.error.message)?"Ese usuario ya existe. Use otro nombre de usuario.":s.error.message);
       if(!s.data||!s.data.user)throw new Error("No se pudo crear el usuario.");
-      var p=await sb.from("perfiles").insert({id:s.data.user.id,nombre:nom,zona:$("czon").value.trim(),telefono:$("ctel").value,rol:"coordinador",cedula:$("ced").value.trim(),recinto:$("crec").value.trim()});
+      var p=await sb.from("perfiles").insert({id:s.data.user.id,nombre:nom,zona:$("czon").value.trim(),telefono:$("ctel").value,rol:"coordinador",cedula:$("ced").value.trim(),recinto:recJoin($("crec").value,$("ccol").value)});
       if(p.error)throw p.error;
       toast("Coordinador creado. Usuario: "+nom+" · Clave: su cédula");
       $("fCoo").reset();loadRes();
@@ -675,7 +679,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       if(tr.error){toast(/actualizar_contacto/i.test(tr.error.message||"")?"Falta instalar la función en Supabase":errMsg(tr.error));return}
       toast("Datos actualizados");loadMine();return}
     if(f.getAttribute&&f.getAttribute("data-cedit")){
-      e.preventDefault();var jid=f.getAttribute("data-cedit"),jr=await sb.rpc("editar_jefe",jefeArgs(jid,{nombre:f.elements.n.value,zona:f.elements.z.value,telefono:f.elements.t.value,cedula:f.elements.ce.value,recinto:f.elements.re.value}));
+      e.preventDefault();var jid=f.getAttribute("data-cedit"),jr=await sb.rpc("editar_jefe",jefeArgs(jid,{nombre:f.elements.n.value,zona:f.elements.z.value,telefono:f.elements.t.value,cedula:f.elements.ce.value,recinto:recJoin(f.elements.re.value,f.elements.co.value)}));
       if(jr.error){toast(errMsg(jr.error));return}toast("Cambios guardados");loadComites();return}
     if(f.getAttribute&&f.getAttribute("data-creset")){
       e.preventDefault();var kk=f.elements.k.value;if(kk.length<6){toast("La clave debe tener al menos 6 caracteres");return}
@@ -690,7 +694,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(!f.getAttribute||!f.getAttribute("data-edit"))return;
     e.preventDefault();var id=f.getAttribute("data-edit"),n=f.elements.n.value.trim();
     if(!n){toast("Escriba el nombre");return}
-    var mv=parseInt(f.elements.me.value,10);var r=await sb.from("perfiles").update({nombre:n,zona:f.elements.z.value.trim(),telefono:f.elements.t.value,cedula:f.elements.ce.value.trim(),recinto:f.elements.re.value.trim(),meta:mv>0?Math.min(mv,500):null}).eq("id",id);
+    var mv=parseInt(f.elements.me.value,10);var r=await sb.from("perfiles").update({nombre:n,zona:f.elements.z.value.trim(),telefono:f.elements.t.value,cedula:f.elements.ce.value.trim(),recinto:recJoin(f.elements.re.value,f.elements.co.value),meta:mv>0?Math.min(mv,500):null}).eq("id",id);
     if(r.error){toast(errMsg(r.error));return}
     toast("Cambios guardados");loadRes()
   });
