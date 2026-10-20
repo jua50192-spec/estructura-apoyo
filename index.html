@@ -603,8 +603,12 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   };
 
   /* ---------- clics ---------- */
+  function nom(t){var r=t.closest&&t.closest(".row"),n=r&&r.querySelector(".nm");return n?n.textContent.replace(/\s*\(desactivado\)\s*$/,"").replace(/^Comité · /,""):"esta persona"}
   document.addEventListener("click",async function(e){
     var t=e.target,g=function(a){return t.getAttribute&&t.getAttribute(a)};
+    if((g("data-del")||g("data-aq")||g("data-cq"))&&!confirm("¿Desea quitar a "+nom(t)+" de la lista?"))return;
+    if((g("data-act")||g("data-cact"))&&g("data-to")==="0"&&!confirm("¿Desea desactivar a "+nom(t)+"?\n\nNo podrá entrar a la app hasta que la active de nuevo."))return;
+    if(g("data-perm")&&g("data-to")==="0"&&!confirm("¿Desea quitar el permiso para formar comités?"))return;
     if(g("data-tab")){tab(g("data-tab"));return}
     if(g("data-perm")){var pr=await sb.from("perfiles").update({puede_comites:g("data-to")==="1"}).eq("id",g("data-perm"));if(pr.error)toast(errMsg(pr.error));else{toast(g("data-to")==="1"?"Permiso otorgado":"Permiso retirado");loadRes()}return}
     if(g("data-cver")){openCom(g("data-cver"));return}
