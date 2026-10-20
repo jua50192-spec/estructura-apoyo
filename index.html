@@ -58,6 +58,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--brand);outline-
 .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .cw{border-top:1px solid var(--line)}.cw:first-child{border-top:0}.cw>.row{border-top:0}
 .cdet{background:var(--tile);border-radius:8px;padding:12px;margin:0 0 10px}
+.cw.sub2{margin-left:16px;border-left:3px solid var(--line);padding-left:8px}
 .mh{font:700 16px var(--body);margin:14px 0 4px}
 .nm{font-weight:600;overflow-wrap:anywhere}
 .sub{font-size:13px;color:var(--mute);overflow-wrap:anywhere}
@@ -140,6 +141,25 @@ th{font-weight:600;color:var(--mute);border-top:0}
         </form>
       </div>
       <div><h2>Mis militantes</h2><div id="mine"></div></div>
+      <div id="cmt" hidden>
+        <h2>Mis comités</h2>
+        <p class="sub">Usted decide quién dirige un comité. Cada jefe de comité entra con su usuario e inscribe a su gente, y usted ve todo lo que hace.</p>
+        <button id="jnb" class="btn ghost wide" style="margin-top:8px">Añadir jefe de comité</button>
+        <form id="fJefe" class="fld" hidden autocomplete="off" style="margin-top:8px">
+          <div><label for="jnom">Nombre</label><input id="jnom" required></div>
+          <div><label for="jced">Cédula (se usa como clave; no se guarda)</label><input id="jced" inputmode="numeric" placeholder="000-0000000-0" maxlength="13"></div>
+          <div class="cf">
+            <div><label for="jusr">Usuario (sin espacios)</label><input id="jusr" autocapitalize="none" autocorrect="off" spellcheck="false" required></div>
+            <div><label for="jpw">Clave (se llena con la cédula)</label><input id="jpw" type="text" minlength="6" required></div>
+          </div>
+          <div class="cf">
+            <div><label for="jzon">Zona o sector</label><input id="jzon"></div>
+            <div><label for="jtel">Teléfono</label><input id="jtel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12"></div>
+          </div>
+          <button class="btn wide" id="jgo" type="submit">Crear jefe de comité</button>
+        </form>
+        <div id="jlist" style="margin-top:8px"></div>
+      </div>
     </div>
 
     <div id="vAdmin" class="card" hidden>
@@ -341,7 +361,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     ME=r.data;resetIdle();
     $("vCoord").hidden=ME.rol==="admin";$("vAdmin").hidden=ME.rol!=="admin";
     show("sApp");
-    if(ME.rol==="admin")tab("res");else{drawCoordHead();loadMine();doSearch()}
+    $("cmt").hidden=!(ME.rol==="coordinador"&&ME.puede_comites);
+    if(ME.rol==="admin")tab("res");else{drawCoordHead();loadMine();doSearch();if(!$("cmt").hidden)loadComites()}
   }
 
   /* ---------- entrar / salir ---------- */
@@ -371,6 +392,47 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       loadMine();
     }catch(x){toast(/anadir_manual/i.test(x.message||"")?"Falta instalar la función en Supabase":errMsg(x))}
     busy=false;$("mgo").disabled=false;
+  };
+  var CJ={},COPEN=null;
+  async function loadComites(){
+    var r=await sb.rpc("mis_comites");if(r.error){$("jlist").innerHTML='<p class="empty">'+esc(/mis_comites/i.test(r.error.message||"")?"Falta instalar la función de comités en Supabase":errMsg(r.error))+"</p>";return}
+    var a=r.data||[];CJ={};a.forEach(function(c){CJ[c.id]=c});
+    $("jlist").innerHTML=a.map(function(c){
+      return '<div class="cw"><div class="row"><div><div class="nm">'+esc(c.nombre)+(c.activo?"":" (desactivado)")+'</div><div class="sub">'+esc([c.zona,c.telefono].filter(Boolean).join(" · ")||"Sin zona ni teléfono")+" · "+c.n+' militantes</div></div><div class="acts"><button class="btn ghost" data-cver="'+c.id+'">Ver / editar</button><button class="btn ghost" data-cact="'+c.id+'" data-to="'+(c.activo?0:1)+'">'+(c.activo?"Desactivar":"Activar")+'</button></div></div><div class="cdet" id="cj-'+c.id+'" hidden></div></div>'}).join("")||'<p class="empty">Todavía no ha formado comités.</p>';
+    if(COPEN&&CJ[COPEN])openCom(COPEN,true);else COPEN=null;
+  }
+  async function openCom(id,keep){
+    var box=$("cj-"+id);if(!box)return;
+    if(!keep&&COPEN===id){box.hidden=true;COPEN=null;return}
+    if(COPEN&&COPEN!==id){var o=$("cj-"+COPEN);if(o)o.hidden=true}
+    COPEN=id;var c=CJ[id];box.hidden=false;
+    box.innerHTML='<form class="fld" data-cedit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(c.nombre)+'" required></div><div class="cf"><div><label>Zona</label><input name="z" value="'+esc(c.zona||"")+'"></div><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'"></div></div><button class="btn wide" type="submit">Guardar cambios</button></form><h3 class="mh">Restablecer clave</h3><form class="fld" data-creset="'+id+'" autocomplete="off"><div><label>Clave nueva (mínimo 6)</label><input name="k" type="text" minlength="6" required autocapitalize="none" autocomplete="off"></div><button class="btn wide" type="submit">Poner esta clave</button></form><h3 class="mh">Militantes de este comité</h3><div id="cm-'+id+'"><p class="empty">Cargando…</p></div>';
+    var r=await sb.rpc("militantes_de",{p_coord:id});var ml=$("cm-"+id);if(!ml)return;
+    if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
+    ml.innerHTML=(r.data||[]).map(function(p){var tel=p.celular?" · "+esc(fmtCel(p.celular)):"";
+      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:"",p.estado].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+tel+'</div></div><button class="btn ghost" data-cq="'+p.id+'" data-cco="'+id+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
+  }
+  $("jnb").onclick=function(){var f=$("fJefe");f.hidden=!f.hidden;if(!f.hidden)$("jnom").focus()};
+  $("jtel").oninput=function(){this.value=fmtT(this.value)};
+  $("jced").oninput=function(){this.value=fmtC(this.value);$("jpw").value=this.value.replace(/\D/g,"")};
+  $("jusr").oninput=function(){this.dataset.man=this.value?1:""};
+  $("jnom").oninput=function(){var u=$("jusr");if(u.dataset.man)return;var w=this.value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").split(/\s+/).filter(Boolean);u.value=w.length>1?w[0]+"."+w[w.length-1]:(w[0]||"")};
+  $("fJefe").onsubmit=async function(e){
+    e.preventDefault();if(busy)return;
+    var nom=$("jnom").value.trim(),em=userEmail($("jusr").value),pw=$("jpw").value;
+    if(!nom||em===DOM||pw.length<6){toast("Complete nombre, usuario y una clave de 6 o más caracteres");return}
+    busy=true;$("jgo").disabled=true;
+    try{
+      var tmp=supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:"tmp-"+Date.now()}});
+      var sg=await tmp.auth.signUp({email:em,password:pw});
+      if(sg.error)throw new Error(/registered|exists/i.test(sg.error.message)?"Ese usuario ya existe. Use otro nombre de usuario.":sg.error.message);
+      if(!sg.data||!sg.data.user)throw new Error("No se pudo crear el usuario.");
+      var pr=await sb.rpc("crear_jefe",{p_id:sg.data.user.id,p_nombre:nom,p_zona:$("jzon").value.trim(),p_telefono:$("jtel").value});
+      if(pr.error)throw pr.error;
+      toast("Jefe de comité creado. Usuario: "+$("jusr").value.trim());
+      $("fJefe").reset();$("jusr").dataset.man="";$("fJefe").hidden=true;loadComites();
+    }catch(x){toast(/crear_jefe/i.test(x.message||"")?"Falta instalar la función de comités en Supabase":errMsg(x))}
+    busy=false;$("jgo").disabled=false;
   };
   $("pwb").onclick=function(){var f=$("fPw");f.hidden=!f.hidden;if(!f.hidden)$("pw1").focus()};
   $("fPw").onsubmit=async function(e){
@@ -427,10 +489,11 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var rc=d.recintos||[];$("byR").innerHTML=barList(rc.map(function(x){return x.recinto}),rc.map(function(x){return x.n}));
     $("last").innerHTML=(d.ultimos||[]).map(function(x){var m=Math.max(1,Math.round((Date.now()-new Date(x.creado))/60000));
       return '<div class="row"><div><div class="nm">'+esc(x.nombre)+'</div><div class="sub">'+esc(x.coord)+" · "+(m<60?"hace "+m+" min":m<1440?"hace "+Math.round(m/60)+" h":"hace "+Math.round(m/1440)+" d")+"</div></div></div>"}).join("")||'<p class="empty">Sin registros.</p>';
-    COO={};co.forEach(function(c){COO[c.id]=c});
-    $("clist").innerHTML=co.map(function(c){
-      return '<div class="cw"><div class="row"><div><div class="nm">'+esc(c.nombre)+(c.activo?"":" (desactivado)")+'</div><div class="sub">'+esc([c.zona,c.telefono].filter(Boolean).join(" · ")||"Sin zona ni teléfono")+" · "+c.n+' militantes</div></div>'+
-      '<div class="acts"><button class="btn ghost" data-ver="'+c.id+'">Ver / editar</button><button class="btn ghost" data-act="'+c.id+'" data-to="'+(c.activo?0:1)+'">'+(c.activo?"Desactivar":"Activar")+'</button></div></div><div class="cdet" id="cd-'+c.id+'" hidden></div></div>'}).join("")||'<p class="empty">Todavía no hay coordinadores.</p>';
+    var je=d.jefes||[];COO={};co.forEach(function(c){COO[c.id]=c});je.forEach(function(c){COO[c.id]=c});
+    function fila(c,sub){var tot=c.propios!=null&&c.n!==c.propios?" ("+c.propios+" propios)":"";
+      return '<div class="cw'+(sub?" sub2":"")+'"><div class="row"><div><div class="nm">'+(sub?"Comité · ":"")+esc(c.nombre)+(c.activo?"":" (desactivado)")+'</div><div class="sub">'+esc([c.zona,c.telefono].filter(Boolean).join(" · ")||"Sin zona ni teléfono")+" · "+c.n+" militantes"+tot+(c.puede_comites?" · puede formar comités":"")+'</div></div>'+
+      '<div class="acts"><button class="btn ghost" data-ver="'+c.id+'">Ver / editar</button><button class="btn ghost" data-act="'+c.id+'" data-to="'+(c.activo?0:1)+'">'+(c.activo?"Desactivar":"Activar")+'</button></div></div><div class="cdet" id="cd-'+c.id+'" hidden></div></div>'}
+    $("clist").innerHTML=co.map(function(c){return fila(c,false)+je.filter(function(h){return h.padre_id===c.id}).map(function(h){return fila(h,true)}).join("")}).join("")||'<p class="empty">Todavía no hay coordinadores.</p>';
     if(OPEN&&COO[OPEN])openDet(OPEN,true);else OPEN=null;
   }
   var COO={},OPEN=null;
@@ -439,7 +502,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(!keep&&OPEN===id){box.hidden=true;OPEN=null;return}
     if(OPEN&&OPEN!==id){var o=$("cd-"+OPEN);if(o)o.hidden=true}
     OPEN=id;var c=COO[id];box.hidden=false;
-    box.innerHTML='<form class="fld" data-edit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(c.nombre)+'" required></div><div class="cf"><div><label>Zona</label><input name="z" value="'+esc(c.zona||"")+'"></div><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'"></div></div><button class="btn wide" type="submit">Guardar cambios</button></form><h3 class="mh">Restablecer clave</h3><form class="fld" data-reset="'+id+'" autocomplete="off"><div><label>Clave nueva (mínimo 6; puede ser su cédula sin guiones)</label><input name="k" type="text" minlength="6" required autocapitalize="none" autocomplete="off"></div><button class="btn wide" type="submit">Poner esta clave</button></form><h3 class="mh">Militantes de este coordinador</h3><div id="ml-'+id+'"><p class="empty">Cargando…</p></div>';
+    box.innerHTML='<form class="fld" data-edit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(c.nombre)+'" required></div><div class="cf"><div><label>Zona</label><input name="z" value="'+esc(c.zona||"")+'"></div><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'"></div></div><button class="btn wide" type="submit">Guardar cambios</button></form>'+(c.puede_comites!=null?'<h3 class="mh">Comités</h3><button class="btn ghost wide" data-perm="'+id+'" data-to="'+(c.puede_comites?0:1)+'">'+(c.puede_comites?"Quitar permiso para formar comités":"Permitir que forme comités")+'</button>':"")+'<h3 class="mh">Restablecer clave</h3><form class="fld" data-reset="'+id+'" autocomplete="off"><div><label>Clave nueva (mínimo 6; puede ser su cédula sin guiones)</label><input name="k" type="text" minlength="6" required autocapitalize="none" autocomplete="off"></div><button class="btn wide" type="submit">Poner esta clave</button></form><h3 class="mh">Militantes de este coordinador</h3><div id="ml-'+id+'"><p class="empty">Cargando…</p></div>';
     var r=await sb.from("seguidores").select("padron_id,creado,padron(nombre,cedula,recinto,colegio,celular)").eq("coord_id",id).order("creado",{ascending:false});
     var ml=$("ml-"+id);if(!ml)return;
     if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
@@ -543,6 +606,10 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   document.addEventListener("click",async function(e){
     var t=e.target,g=function(a){return t.getAttribute&&t.getAttribute(a)};
     if(g("data-tab")){tab(g("data-tab"));return}
+    if(g("data-perm")){var pr=await sb.from("perfiles").update({puede_comites:g("data-to")==="1"}).eq("id",g("data-perm"));if(pr.error)toast(errMsg(pr.error));else{toast(g("data-to")==="1"?"Permiso otorgado":"Permiso retirado");loadRes()}return}
+    if(g("data-cver")){openCom(g("data-cver"));return}
+    if(g("data-cact")){var ca=await sb.rpc("editar_jefe",{p_id:g("data-cact"),p_nombre:CJ[g("data-cact")].nombre,p_zona:CJ[g("data-cact")].zona,p_telefono:CJ[g("data-cact")].telefono,p_activo:g("data-to")==="1"});if(ca.error)toast(errMsg(ca.error));else{toast(g("data-to")==="1"?"Comité activado":"Comité desactivado");loadComites()}return}
+    if(g("data-cq")){var cq=await sb.rpc("quitar_de",{p_coord:g("data-cco"),p_id:+g("data-cq")});if(cq.error)toast(errMsg(cq.error));else{toast("Quitado de ese comité");loadComites()}return}
     if(g("data-ver")){openDet(g("data-ver"));return}
     if(g("data-aq")){var r3=await sb.from("seguidores").delete().eq("padron_id",+g("data-aq"));if(r3.error)toast(errMsg(r3.error));else{toast("Quitado de la lista");loadRes()}return}
     if(g("data-act")){setActivo(g("data-act"),g("data-to")==="1");return}
@@ -551,9 +618,16 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       loadMine();doSearch();return}
     if(g("data-del")){var r2=await sb.rpc("quitar_seguidor",{p_id:+g("data-del")});if(r2.error)toast(errMsg(r2.error));else toast("Quitado de su lista");loadMine();doSearch()}
   });
-  document.addEventListener("input",function(e){var t=e.target;if(t.name==="t"&&t.closest("[data-edit]"))t.value=fmtT(t.value)});
+  document.addEventListener("input",function(e){var t=e.target;if(t.name==="t"&&t.closest("[data-edit],[data-cedit]"))t.value=fmtT(t.value)});
   document.addEventListener("submit",async function(e){
     var f=e.target;
+    if(f.getAttribute&&f.getAttribute("data-cedit")){
+      e.preventDefault();var jid=f.getAttribute("data-cedit"),jr=await sb.rpc("editar_jefe",{p_id:jid,p_nombre:f.elements.n.value,p_zona:f.elements.z.value,p_telefono:f.elements.t.value,p_activo:CJ[jid]?CJ[jid].activo:true});
+      if(jr.error){toast(errMsg(jr.error));return}toast("Cambios guardados");loadComites();return}
+    if(f.getAttribute&&f.getAttribute("data-creset")){
+      e.preventDefault();var kk=f.elements.k.value;if(kk.length<6){toast("La clave debe tener al menos 6 caracteres");return}
+      var kr=await sb.rpc("admin_reset_clave",{p_id:f.getAttribute("data-creset"),p_clave:kk});
+      if(kr.error){toast(errMsg(kr.error));return}f.reset();toast("Clave cambiada. Nueva clave: "+kk);return}
     if(f.getAttribute&&f.getAttribute("data-reset")){
       e.preventDefault();var rid=f.getAttribute("data-reset"),k=f.elements.k.value;
       if(k.length<6){toast("La clave debe tener al menos 6 caracteres");return}
