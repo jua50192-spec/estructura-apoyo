@@ -238,7 +238,7 @@ th{font-weight:600;color:var(--mute);border-top:0}
       <div><label for="pw2">Repita la clave nueva</label><input id="pw2" type="password" minlength="6" autocomplete="new-password" required></div>
       <button class="btn wide" id="pws" type="submit">Guardar clave</button>
     </form>
-    <p class="sub" id="ver" style="text-align:center;margin:12px 0 2px">Versión 20-oct-2026 (3)</p>
+    <p class="sub" id="ver" style="text-align:center;margin:12px 0 2px">Versión 20-oct-2026 (4)</p>
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 </main>
@@ -455,9 +455,12 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var a=r.data||[];$("cmine").textContent=a.length;
     if(a.length){var d=new Date(a[0].creado);$("cdate").textContent=d.toLocaleDateString("es-DO",{day:"numeric",month:"short"})}else $("cdate").textContent="—";
     $("mine").innerHTML=a.length?a.map(function(p){
-      var tel=p.celular?'<a href="tel:'+esc(p.celular)+'">'+esc(fmtCel(p.celular))+"</a>":"";
-      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:"",p.estado].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+(tel?" · "+tel:"")+'</div></div><button class="btn ghost" data-del="'+p.id+'">Quitar</button></div>'}).join(""):'<p class="empty">Todavía no ha añadido militantes.</p>';
+      var tel=p.celular?'<a href="tel:'+esc(p.celular)+'">'+esc(fmtCel(p.celular))+"</a>":'<span style="color:var(--warn)">Sin teléfono</span>';
+      return '<div class="cw"><div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:"",p.estado].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+" · "+tel+'</div></div><div class="acts"><button class="btn ghost" data-tel="'+p.id+'">Teléfono</button><button class="btn ghost" data-del="'+p.id+'">Quitar</button></div></div>'+
+      '<div class="cdet" id="te-'+p.id+'" hidden><form class="fld" data-telf="'+p.id+'" autocomplete="off"><div><label>Teléfono actualizado</label><input name="t" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12" value="'+esc(p.celular?fmtCel(p.celular):"")+'" required></div><button class="btn wide" type="submit">Guardar teléfono</button></form></div></div>'}).join(""):'<p class="empty">Todavía no ha añadido militantes.</p>';
+    if(PENDTEL){var bx=$("te-"+PENDTEL);if(bx){bx.hidden=false;var ip=bx.querySelector("input");if(ip){ip.focus();bx.scrollIntoView({block:"center"})}}PENDTEL=null}
   }
+  var PENDTEL=null;
   var sT=null,sSeq=0;
   async function doSearch(){
     var q=$("q").value.trim(),seq=++sSeq;
@@ -615,17 +618,23 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(g("data-cver")){openCom(g("data-cver"));return}
     if(g("data-cact")){var ca=await sb.rpc("editar_jefe",{p_id:g("data-cact"),p_nombre:CJ[g("data-cact")].nombre,p_zona:CJ[g("data-cact")].zona,p_telefono:CJ[g("data-cact")].telefono,p_activo:g("data-to")==="1"});if(ca.error)toast(errMsg(ca.error));else{toast(g("data-to")==="1"?"Comité activado":"Comité desactivado");loadComites()}return}
     if(g("data-cq")){var cq=await sb.rpc("quitar_de",{p_coord:g("data-cco"),p_id:+g("data-cq")});if(cq.error)toast(errMsg(cq.error));else{toast("Quitado de ese comité");loadComites()}return}
+    if(g("data-tel")){var tb=$("te-"+g("data-tel"));if(tb){tb.hidden=!tb.hidden;if(!tb.hidden){var ti=tb.querySelector("input");if(ti)ti.focus()}}return}
     if(g("data-ver")){openDet(g("data-ver"));return}
     if(g("data-aq")){var r3=await sb.from("seguidores").delete().eq("padron_id",+g("data-aq"));if(r3.error)toast(errMsg(r3.error));else{toast("Quitado de la lista");loadRes()}return}
     if(g("data-act")){setActivo(g("data-act"),g("data-to")==="1");return}
     if(g("data-add")){t.disabled=true;var r=await sb.rpc("anadir_seguidor",{p_id:+g("data-add")});
-      if(r.error)toast(errMsg(r.error));else if(r.data==="ok")toast("Añadido");else if(r.data==="ya_tomado")toast("Esa persona ya la tiene otro coordinador");
+      if(r.error)toast(errMsg(r.error));else if(r.data==="ok"){toast("Añadido. Confirme o actualice su teléfono");PENDTEL=+g("data-add")}else if(r.data==="ya_tomado")toast("Esa persona ya la tiene otro coordinador");
       loadMine();doSearch();return}
     if(g("data-del")){var r2=await sb.rpc("quitar_seguidor",{p_id:+g("data-del")});if(r2.error)toast(errMsg(r2.error));else toast("Quitado de su lista");loadMine();doSearch()}
   });
-  document.addEventListener("input",function(e){var t=e.target;if(t.name==="t"&&t.closest("[data-edit],[data-cedit]"))t.value=fmtT(t.value)});
+  document.addEventListener("input",function(e){var t=e.target;if(t.name==="t"&&t.closest("[data-edit],[data-cedit],[data-telf]"))t.value=fmtT(t.value)});
   document.addEventListener("submit",async function(e){
     var f=e.target;
+    if(f.getAttribute&&f.getAttribute("data-telf")){
+      e.preventDefault();var tv=f.elements.t.value;if(tv.replace(/\D/g,"").length!==10){toast("Escriba el teléfono con 10 números");return}
+      var tr=await sb.rpc("actualizar_telefono",{p_id:+f.getAttribute("data-telf"),p_tel:tv});
+      if(tr.error){toast(/actualizar_telefono/i.test(tr.error.message||"")?"Falta instalar la función en Supabase":errMsg(tr.error));return}
+      toast("Teléfono actualizado");loadMine();return}
     if(f.getAttribute&&f.getAttribute("data-cedit")){
       e.preventDefault();var jid=f.getAttribute("data-cedit"),jr=await sb.rpc("editar_jefe",{p_id:jid,p_nombre:f.elements.n.value,p_zona:f.elements.z.value,p_telefono:f.elements.t.value,p_activo:CJ[jid]?CJ[jid].activo:true});
       if(jr.error){toast(errMsg(jr.error));return}toast("Cambios guardados");loadComites();return}
