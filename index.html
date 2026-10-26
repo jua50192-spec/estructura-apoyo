@@ -306,8 +306,10 @@ a.btn{display:block;text-align:center;text-decoration:none}
           <button id="up" class="btn wide">Subir al servidor</button>
         </div>
         <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
-        <button id="pdel" class="btn ghost wide">Borrar todo el padrón y los militantes</button>
-        <p class="sub" style="margin:6px 0 0">Antes de borrar, descargue el informe completo en PDF como respaldo (pestaña Resumen).</p>
+        <button id="pbak" class="btn wide">Descargar respaldo de militantes</button>
+        <p class="sub" style="margin:6px 0 14px">Guarda en este aparato un archivo con todos los militantes, sus datos y sus coordinadores. Sirve para recuperar todo si algo falla. Guárdelo en un lugar seguro: tiene datos personales.</p>
+        <button id="pdel" class="btn ghost wide">Borrar del padrón a quienes no son militantes</button>
+        <p class="sub" style="margin:6px 0 0">Los militantes inscritos y sus datos se conservan siempre. Úselo, por ejemplo, para quitar el padrón de prueba antes de cargar el real.</p>
       </div>
 
       <div id="tAju" hidden>
@@ -824,24 +826,45 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(!TMP||busy)return;busy=true;this.disabled=true;
     var rows=[];TMP.forEach(function(g){g.people.forEach(function(q){rows.push({cedula:q.ced,nombre:q.nombre,estado:q.estado||"",celular:q.cel||q.tel||"",recinto:q.rec||"",colegio:q.colegio||""})})});
     try{
+      /* subir_padron (proteger-padron.sql) nunca borra el teléfono, apodo ni dirección que ya están */
       for(var i=0;i<rows.length;i+=500){
-        var r=await sb.from("padron").upsert(rows.slice(i,i+500),{onConflict:"cedula"});
+        var r=await sb.rpc("subir_padron",{p_filas:rows.slice(i,i+500)});
         if(r.error)throw r.error;
         setProg(Math.min(1,(i+500)/rows.length),"Subiendo "+Math.min(i+500,rows.length)+" de "+rows.length+"…");
       }
       toast("Padrón subido: "+rows.length+" personas");$("rep").hidden=true;$("prog").hidden=true;$("pmsg").textContent="";$("pdf").value="";TMP=null;loadPadCount();
-    }catch(e){$("pmsg").textContent="Falló la subida: "+errMsg(e)+". Puede intentarlo de nuevo; no se duplica nada."}
+    }catch(e){$("pmsg").textContent=falta(e)?"No se subió nada: falta pegar en Supabase el archivo proteger-padron.sql.":"Falló la subida: "+errMsg(e)+". Puede intentarlo de nuevo; no se duplica nada."}
     busy=false;this.disabled=false;
   };
   $("pdel").onclick=async function(){
-    var t=prompt("ATENCIÓN: esto borra TODO el padrón y TODOS los militantes inscritos por los coordinadores. No se puede deshacer.\n\nPara confirmar, escriba la palabra BORRAR:");
+    var t=prompt("Esto borra del padrón a las personas que NO son militantes.\nLos militantes inscritos y sus datos se conservan.\n\nPara confirmar, escriba la palabra BORRAR:");
     if(t==null)return;
     if(t.trim().toUpperCase()!=="BORRAR"){toast("No se borró nada");return}
     var b=this;b.disabled=true;
-    var r=await sb.from("padron").delete().gt("id",0);
+    var r=await sb.rpc("borrar_padron_libre");
     b.disabled=false;
-    if(r.error)toast(errMsg(r.error));else{toast("Padrón borrado");loadPadCount()}
+    if(r.error){toast(falta(r.error)?"No se borró nada: falta pegar en Supabase el archivo proteger-padron.sql":errMsg(r.error));return}
+    var d=r.data||{};
+    toast("Borrados: "+(d.borrados||0)+". Se conservaron "+(d.militantes||0)+" militantes.");loadPadCount()
   };
+  /* ---- respaldo ---- */
+  async function todo(tabla,campos,orden){
+    var out=[],from=0;
+    while(true){
+      var r=await sb.from(tabla).select(campos).order(orden,{ascending:true}).range(from,from+999);
+      if(r.error)throw r.error;
+      out=out.concat(r.data||[]);
+      if(!r.data||r.data.length<1000)break;from+=1000}
+    return out}
+  $("pbak").onclick=function(){var btn=this;withBusy(btn,async function(){
+    var seg=await todo("seguidores","padron_id,coord_id,creado,padron(*)","creado");
+    var per=await todo("perfiles","*","creado");
+    var f=new Date(),d=f.getFullYear()+"-"+String(f.getMonth()+1).padStart(2,"0")+"-"+String(f.getDate()).padStart(2,"0");
+    var data={app:"estructura-apoyo",tipo:"respaldo",fecha:f.toISOString(),militantes:seg,perfiles:per};
+    var url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:"application/json"}));
+    var a=document.createElement("a");a.href=url;a.download="respaldo-militantes-"+d+".json";document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(url)},4000);
+    toast("Respaldo descargado: "+seg.length+" militantes")})};
 
   /* ---- ajustes ---- */
   function drawAju(){$("anom").value=CONF.candidato||"";NEWFOTO=NEWLOGO=null;
