@@ -96,6 +96,41 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .chk{display:flex;gap:10px;align-items:center;color:var(--ink);font-size:15px;margin:2px 0}
 .chk input{width:22px;height:22px;flex:none;margin:0}
 .hint{font-size:13px;color:var(--mute);margin:0}
+.medit{background:var(--tile);border-radius:8px;padding:12px;margin:0 0 10px}
+/* ---- informe para imprimir / guardar como PDF ---- */
+#printArea{display:none}
+@page{size:A4;margin:12mm 10mm}
+@media print{
+  html,body{background:#fff!important;color:#000!important;padding:0!important;margin:0!important}
+  body>*:not(#printArea){display:none!important}
+  #printArea{display:block!important;font-family:Arial,Helvetica,sans-serif;color:#000;font-size:9.5pt;line-height:1.3;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+.rh{display:flex;align-items:center;gap:12px;border-bottom:2.5px solid #0e5a6e;padding-bottom:8px;margin-bottom:10px}
+.rh img{width:58px;height:58px;object-fit:contain;flex:none}
+.rh .rt{flex:1}
+.rh .rc{font-size:16pt;font-weight:700;color:#0e5a6e}
+.rh .rs{font-size:11pt;font-weight:700;margin-top:2px}
+.rh .rd{font-size:8.5pt;color:#444;margin-top:2px}
+.rsum{font-size:9pt;margin:0 0 10px;color:#222}
+.rgr{margin:0 0 14px}
+.rbox{border:1.5px solid #0e5a6e;border-radius:4px;padding:7px 9px;background:#eef5f7;break-inside:avoid;break-after:avoid;page-break-inside:avoid;page-break-after:avoid}
+.rbox.sub{border-color:#5b6b76;background:#f3f5f6}
+.rtag{font-size:7.5pt;font-weight:700;letter-spacing:.06em;color:#0e5a6e;text-transform:uppercase}
+.rbox.sub .rtag{color:#444}
+.rname{font-size:12pt;font-weight:700;margin:1px 0 5px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px 12px}
+.rgrid span{display:block;font-size:7pt;color:#555;text-transform:uppercase}
+.rgrid b{font-size:9pt;font-weight:600}
+.rcount{font-size:8.5pt;margin-top:5px;font-weight:700}
+.rtab{width:100%;border-collapse:collapse;margin-top:4px;font-size:8.5pt}
+.rtab th{background:#0e5a6e;color:#fff;text-align:left;padding:4px 5px;font-weight:700;border:1px solid #0e5a6e;white-space:nowrap}
+.rtab td{padding:3px 5px;border:1px solid #c9d3d8;vertical-align:top;white-space:normal}
+.rtab tr{break-inside:avoid;page-break-inside:avoid}
+.rtab tbody tr:nth-child(even) td{background:#f6f8f9}
+.rtab td.n{text-align:right;color:#555;width:22px}
+.rtab td.nw{white-space:nowrap}
+.rnone{font-size:9pt;color:#555;margin:4px 0 0;font-style:italic}
+.rfoot{margin-top:12px;font-size:8pt;color:#555;border-top:1px solid #ccc;padding-top:4px}
 </style>
 </head>
 <body>
@@ -136,20 +171,26 @@ a.btn{display:block;text-align:center;text-decoration:none}
       <div>
         <h2>Buscar en el padrón</h2>
         <label for="q">Nombre, apellido o cédula</label>
-        <input id="q" type="search" placeholder="Ej. Martínez" autocomplete="off">
+        <input id="q" type="search" placeholder="Ej. Antonio" autocomplete="off">
         <div id="res" style="margin-top:8px"></div>
         <button id="mnb" class="btn ghost wide" style="margin-top:8px">¿No está en el padrón? Añadir a mano</button>
         <form id="fMan" class="fld" hidden autocomplete="off" style="margin-top:8px">
           <div><label for="mnom">Nombre completo</label><input id="mnom" required></div>
-          <div><label for="mtel">Teléfono</label><input id="mtel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12" required></div>
-          <div><label for="mced">Cédula (opcional)</label><input id="mced" inputmode="numeric" placeholder="000-0000000-0" maxlength="13"></div>
-          <div><label for="mrec">Sector o lugar (opcional)</label><input id="mrec"></div>
+          <div class="cf">
+            <div><label for="mced">Cédula</label><input id="mced" inputmode="numeric" placeholder="000-0000000-0" maxlength="13" required></div>
+            <div><label for="mtel">Teléfono</label><input id="mtel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12" required></div>
+          </div>
+          <div class="cf">
+            <div><label for="mrec">Recinto</label><input id="mrec" maxlength="80"></div>
+            <div><label for="mcol">Colegio</label><input id="mcol" maxlength="20"></div>
+          </div>
+          <p class="hint">Si la cédula está en el padrón, el recinto y el colegio se toman de ahí.</p>
           <button class="btn wide" id="mgo" type="submit">Añadir militante</button>
         </form>
       </div>
       <div>
         <h2>Mis militantes</h2><div id="mine"></div>
-        <button id="cxl" class="btn ghost wide" style="margin-top:10px">Descargar mi lista en Excel</button>
+        <button id="cxl" class="btn wide" style="margin-top:10px">Descargar informe en PDF</button>
       </div>
       <div id="cSub" hidden>
         <h2>Mis subcoordinadores</h2>
@@ -159,7 +200,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
           <div><label for="snom">Nombre completo</label><input id="snom" required></div>
           <div><label for="sced">Cédula</label><input id="sced" inputmode="numeric" placeholder="000-0000000-0" maxlength="13" required></div>
           <div class="cf">
-            <div><label for="stel">Teléfono (opcional)</label><input id="stel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12"></div>
+            <div><label for="stel">Teléfono</label><input id="stel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12" required></div>
             <div><label for="szon">Zona o sector (opcional)</label><input id="szon"></div>
           </div>
           <p class="hint">Para entrar usará: <b>usuario</b> = su nombre completo · <b>clave</b> = su cédula sin guiones.</p>
@@ -188,7 +229,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
         <h2 style="margin-top:16px">Por recinto</h2><div id="byR"></div>
         <h2 style="margin-top:16px">Últimos registros</h2><div id="last"></div>
         <button id="rfs" class="btn ghost wide" style="margin-top:12px">Actualizar</button>
-        <button id="axl" class="btn wide" style="margin-top:10px">Descargar todos los militantes en Excel</button>
+        <button id="axl" class="btn wide" style="margin-top:10px">Informe completo en PDF</button>
         <h2 style="margin-top:16px">Historial de cambios</h2>
         <p class="sub" style="margin:0 0 4px">Quién añadió o quitó a cada militante (últimos 50).</p>
         <div id="hist"></div>
@@ -200,7 +241,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
           <div><label for="cnom">Nombre completo</label><input id="cnom" required></div>
           <div><label for="ced">Cédula</label><input id="ced" inputmode="numeric" placeholder="000-0000000-0" maxlength="13" required></div>
           <div class="cf">
-            <div><label for="ctel">Teléfono (opcional)</label><input id="ctel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12"></div>
+            <div><label for="ctel">Teléfono</label><input id="ctel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12" required></div>
             <div><label for="czon">Zona (opcional)</label><input id="czon"></div>
           </div>
           <label class="chk"><input type="checkbox" id="cperm"> Puede crear subcoordinadores</label>
@@ -228,7 +269,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
         </div>
         <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
         <button id="pdel" class="btn ghost wide">Borrar todo el padrón y los militantes</button>
-        <p class="sub" style="margin:6px 0 0">Antes de borrar, descargue el Excel de militantes como respaldo (pestaña Resumen).</p>
+        <p class="sub" style="margin:6px 0 0">Antes de borrar, descargue el informe completo en PDF como respaldo (pestaña Resumen).</p>
       </div>
 
       <div id="tAju" hidden>
@@ -253,8 +294,9 @@ a.btn{display:block;text-align:center;text-decoration:none}
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 25-oct-2026 (12)</p>
+  <p class="ver" id="ver">Versión 25-oct-2026 (13)</p>
 </main>
+<div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
 
 <script>
@@ -351,10 +393,11 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var msg="Hola "+nombre+". Ya tiene acceso a la app Estructura de apoyo como "+rol+".\n\nEntre aquí: "+appUrl()+"\nUsuario: "+nombre+"\nClave: su número de cédula, sin guiones.\n\nAl entrar, toque «Cambiar mi clave» y ponga una clave suya.";
     return '<div class="note ok"><b>Listo. '+esc(nombre)+' ya puede entrar.</b><br>Usuario: '+esc(nombre)+'<br>Clave: su cédula, sin guiones</div><a class="btn wide" target="_blank" rel="noopener" href="'+esc(waLink(tel,msg))+'">Enviarle el acceso por WhatsApp</a>'}
   /* Crea la cuenta de entrada: usuario = nombre completo, clave = cédula sin guiones */
-  async function crearCuenta(nom,ced){
+  async function crearCuenta(nom,ced,tel){
     var cd=digits(ced);
     if(nom.length<3)throw new Error("Escriba el nombre completo");
     if(cd.length!==11)throw new Error("La cédula debe tener 11 números");
+    if(digits(tel).length!==10)throw new Error("El teléfono debe tener 10 números");
     var tmp=supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:"tmp-"+Date.now()}});
     var s=await tmp.auth.signUp({email:userEmail(nom),password:cd});
     if(s.error)throw new Error(/registered|exists/i.test(s.error.message)?"Ya hay una persona con ese nombre. Añada el segundo apellido para diferenciarla.":s.error.message);
@@ -373,43 +416,64 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   function hoy(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
   function slug(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").toLowerCase()||"lista"}
 
-  /* ---------- Excel ---------- */
-  function loadXlsx(){
-    return new Promise(function(res,rej){
-      if(window.XLSX)return res();
-      var s=document.createElement("script");
-      s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-      s.onload=function(){res()};s.onerror=function(){rej(new Error("No se pudo preparar el Excel. Revise el internet."))};
-      document.head.appendChild(s)})}
-  async function saveXlsx(name,head,rows){
-    await loadXlsx();
-    var ws=XLSX.utils.aoa_to_sheet([head].concat(rows));
-    ws["!cols"]=head.map(function(h,i){var m=h.length;rows.forEach(function(r){m=Math.max(m,String(r[i]==null?"":r[i]).length)});return{wch:Math.min(m+2,45)}});
-    var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Militantes");
-    XLSX.writeFile(wb,name)}
-  var HEAD=["Coordinador","Subcoordinador","Nombre","Cédula","Teléfono","Recinto","Colegio","Estado","Fecha de registro"];
-  function pRow(c,s,p,creado){return [c,s,p.nombre||"",cv(p.cedula),fmtCel(p.celular),p.recinto||"",p.colegio||"",p.estado||"",fecha(creado)]}
+  /* ---------- Informe PDF ----------
+     Cada grupo: {tipo, padre, nombre, cedula, telefono, recinto, colegio, fecha, mil:[{nombre,cedula,celular,recinto,colegio,creado}]} */
+  function mRow(p,creado){return {nombre:p.nombre||"",cedula:cv(p.cedula),celular:p.celular||"",recinto:p.recinto||"",colegio:p.colegio||"",creado:creado}}
+  function boxHtml(g){
+    var f=function(l,v){return "<div><span>"+l+"</span><b>"+esc(v||"—")+"</b></div>"};
+    return '<div class="rbox'+(g.tipo==="Subcoordinador"?" sub":"")+'"><div class="rtag">'+esc(g.tipo)+(g.padre?" · equipo de "+esc(g.padre):"")+'</div><div class="rname">'+esc(g.nombre)+'</div><div class="rgrid">'+
+      f("Cédula",g.cedula)+f("Teléfono",fmtCel(g.telefono))+f("Fecha de registro",fecha(g.fecha))+f("Recinto",g.recinto)+f("Colegio",g.colegio)+f("Militantes",String(g.mil.length))+"</div></div>"}
+  function tabHtml(mil){
+    if(!mil.length)return '<p class="rnone">Sin militantes inscritos.</p>';
+    return '<table class="rtab"><thead><tr><th>#</th><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Recinto</th><th>Colegio</th><th>Fecha de registro</th></tr></thead><tbody>'+
+      mil.map(function(m,i){return '<tr><td class="n">'+(i+1)+"</td><td>"+esc(m.nombre)+'</td><td class="nw">'+esc(m.cedula||"—")+'</td><td class="nw">'+esc(fmtCel(m.celular)||"—")+"</td><td>"+esc(m.recinto||"—")+'</td><td class="nw">'+esc(m.colegio||"—")+'</td><td class="nw">'+fecha(m.creado)+"</td></tr>"}).join("")+"</tbody></table>"}
+  function reportHtml(titulo,gs){
+    var tot=gs.reduce(function(a,g){return a+g.mil.length},0),now=new Date();
+    var nC=gs.filter(function(g){return g.tipo==="Coordinador"}).length,nS=gs.length-nC;
+    return '<div class="rh">'+(CONF.logo?'<img src="'+esc(CONF.logo)+'" alt="">':"")+'<div class="rt"><div class="rc">'+esc(CONF.candidato||"Estructura de apoyo")+'</div><div class="rs">'+esc(titulo)+'</div><div class="rd">Emitido el '+now.toLocaleDateString("es-DO",{day:"2-digit",month:"long",year:"numeric"})+" a las "+now.toLocaleTimeString("es-DO",{hour:"2-digit",minute:"2-digit"})+"</div></div>"+(CONF.foto?'<img src="'+esc(CONF.foto)+'" alt="" style="border-radius:50%;object-fit:cover">':"")+"</div>"+
+      '<p class="rsum"><b>Total de militantes: '+tot+"</b>"+(nC?" · Coordinadores: "+nC:"")+(nS?" · Subcoordinadores: "+nS:"")+"</p>"+
+      gs.map(function(g){return '<div class="rgr">'+boxHtml(g)+tabHtml(g.mil)+"</div>"}).join("")+
+      '<div class="rfoot">Documento de uso interno. Contiene datos personales: no lo comparta fuera de la estructura.</div>'}
+  function printReport(titulo,gs){
+    var a=$("printArea"),t0=document.title;
+    a.innerHTML=reportHtml(titulo,gs);
+    document.title=slug(titulo)+"-"+hoy();
+    var done=function(){document.title=t0;window.removeEventListener("afterprint",done)};
+    window.addEventListener("afterprint",done);
+    var imgs=a.querySelectorAll("img"),n=imgs.length,go=function(){setTimeout(function(){window.print()},150)};
+    if(!n)return go();
+    var c=0;imgs.forEach(function(im){if(im.complete)c++;else im.onload=im.onerror=function(){if(++c===n)go()}});if(c===n)go()}
+  async function datosPersona(ced){
+    if(digits(ced).length!==11)return {};
+    try{var r=await sb.rpc("buscar_cedula",{p_ced:ced});return (r.data&&r.data[0])||{}}catch(e){return {}}}
+  async function withBusy(btn,fn){
+    if(btn.disabled)return;var old=btn.textContent;btn.disabled=true;btn.textContent="Preparando…";
+    try{await fn()}catch(x){toast(errMsg(x))}
+    btn.disabled=false;btn.textContent=old}
   async function fetchSeg(ids){
     var out=[],from=0;
     while(true){
-      var q=sb.from("seguidores").select("creado,coord_id,padron(nombre,cedula,recinto,colegio,celular,estado)").order("creado",{ascending:false}).range(from,from+999);
+      var q=sb.from("seguidores").select("creado,coord_id,padron(nombre,cedula,recinto,colegio,celular)").order("creado",{ascending:true}).range(from,from+999);
       if(ids)q=q.in("coord_id",ids);
       var r=await q;if(r.error)throw r.error;
       out=out.concat(r.data||[]);
       if(!r.data||r.data.length<1000)break;from+=1000}
     return out}
-  function who(cid){if(COO[cid])return [COO[cid].nombre,""];var j=JEF[cid];if(j)return [COO[j.padre_id]?COO[j.padre_id].nombre:"",j.nombre];return ["",""]}
-  function segRows(list){return list.map(function(x){var w=who(x.coord_id);return pRow(w[0],w[1],x.padron||{},x.creado)})}
   function jefesDe(cid){return Object.keys(JEF).map(function(k){return JEF[k]}).filter(function(j){return j.padre_id===cid})}
-  async function exportAdmin(btn,coord){
-    if(btn.disabled)return;var old=btn.textContent;btn.disabled=true;btn.textContent="Preparando…";
-    try{
-      var list=await fetchSeg(coord?[coord].concat(jefesDe(coord).map(function(j){return j.id})):null);
-      if(!list.length){toast("No hay militantes para descargar");}
-      else{var nm=coord&&COO[coord]?"militantes-"+slug(COO[coord].nombre):"militantes-todos";
-        await saveXlsx(nm+"-"+hoy()+".xlsx",HEAD,segRows(list));toast("Excel descargado: "+list.length+" militantes")}
-    }catch(x){toast(errMsg(x))}
-    btn.disabled=false;btn.textContent=old}
+  /* Informe del administrador: un coordinador (con sus subcoordinadores) o todos */
+  function reportAdmin(btn,coord){withBusy(btn,async function(){
+    var coords=coord?[COO[coord]]:Object.keys(COO).map(function(k){return COO[k]}).sort(function(a,b){return a.nombre.localeCompare(b.nombre)});
+    var people=[];coords.forEach(function(c){people.push(c);jefesDe(c.id).forEach(function(j){people.push(j)})});
+    if(!people.length){toast("No hay coordinadores");return}
+    var ids=people.map(function(p){return p.id});
+    var list=await fetchSeg(ids),by={};
+    list.forEach(function(x){(by[x.coord_id]=by[x.coord_id]||[]).push(mRow(x.padron||{},x.creado))});
+    var cr={},rp=await sb.from("perfiles").select("id,creado").in("id",ids);(rp.data||[]).forEach(function(x){cr[x.id]=x.creado});
+    var ceds=[];people.forEach(function(p){var d=digits(p.cedula);if(d.length===11){ceds.push(fmtC(d));ceds.push(d)}});
+    var pd={};if(ceds.length){var rr=await sb.from("padron").select("cedula,recinto,colegio").in("cedula",ceds);(rr.data||[]).forEach(function(x){pd[digits(x.cedula)]=x})}
+    var gs=people.map(function(p){var esJ=!!JEF[p.id],info=pd[digits(p.cedula)]||{};
+      return {tipo:esJ?"Subcoordinador":"Coordinador",padre:esJ&&COO[p.padre_id]?COO[p.padre_id].nombre:"",nombre:p.nombre,cedula:p.cedula,telefono:p.telefono,recinto:info.recinto||p.recinto||"",colegio:info.colegio||"",fecha:cr[p.id],mil:by[p.id]||[]}});
+    printReport(coord?"Informe de "+COO[coord].nombre:"Informe completo de militantes",gs)})}
 
   function drawHead(){
     $("hname").textContent=CONF.candidato||"Nombre del candidato";
@@ -459,10 +523,14 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   $("mnb").onclick=function(){var f=$("fMan");f.hidden=!f.hidden;if(!f.hidden)$("mnom").focus()};
   $("mtel").oninput=function(){this.value=fmtT(this.value)};
   $("mced").oninput=function(){this.value=fmtC(this.value)};
+  function falta(x){return /Could not find the function|schema cache/i.test((x&&x.message)||"")}
   $("fMan").onsubmit=async function(e){
-    e.preventDefault();if(busy)return;busy=true;$("mgo").disabled=true;
+    e.preventDefault();if(busy)return;
+    if(digits($("mced").value).length!==11){toast("La cédula debe tener 11 números");return}
+    if(digits($("mtel").value).length!==10){toast("El teléfono debe tener 10 números");return}
+    busy=true;$("mgo").disabled=true;
     try{
-      var r=await sb.rpc("anadir_manual",{p_nombre:$("mnom").value,p_cedula:$("mced").value,p_celular:$("mtel").value,p_recinto:$("mrec").value});
+      var r=await sb.rpc("anadir_manual",{p_nombre:$("mnom").value,p_cedula:$("mced").value,p_celular:$("mtel").value,p_recinto:$("mrec").value,p_colegio:$("mcol").value});
       if(r.error)throw r.error;
       var d=r.data;
       if(d==="padron:ya_tomado")toast("Esa cédula ya está en el padrón y la tiene otro coordinador");
@@ -471,7 +539,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       else toast("Militante añadido");
       if(d==="ok"||d==="padron:ok"){$("fMan").reset();$("fMan").hidden=true}
       loadMine();
-    }catch(x){toast(/anadir_manual/i.test(x.message||"")?"Falta instalar la función en Supabase":errMsg(x))}
+    }catch(x){toast(falta(x)?"Falta pegar en Supabase el archivo cambios_v13.sql":errMsg(x))}
     busy=false;$("mgo").disabled=false;
   };
   $("pwb").onclick=function(){var f=$("fPw");f.hidden=!f.hidden;if(!f.hidden)$("pw1").focus()};
@@ -494,22 +562,30 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var a=r.data||[];MINE=a;$("cmine").textContent=a.length;if(!$("cSub").hidden)drawTot();
     if(a.length){var d=new Date(a[0].creado);$("cdate").textContent=d.toLocaleDateString("es-DO",{day:"numeric",month:"short"})}else $("cdate").textContent="—";
     $("mine").innerHTML=a.length?a.map(function(p){
-      var tel=p.celular?'<a href="tel:'+esc(p.celular)+'">'+esc(fmtCel(p.celular))+"</a>":"";
-      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:"",p.estado].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+(tel?" · "+tel:"")+'</div></div><button class="btn ghost" data-del="'+p.id+'">Quitar</button></div>'}).join(""):'<p class="empty">Todavía no ha añadido militantes.</p>';
+      var tel=p.celular?'<a href="tel:'+esc(p.celular)+'">'+esc(fmtCel(p.celular))+"</a>":'<span style="color:var(--bad)">Sin teléfono</span>';
+      return '<div class="cw"><div class="row"><div><div class="nm">'+esc(p.nombre)+(p.apodo?' <span class="sub">('+esc(p.apodo)+")</span>":"")+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:""].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula||"Sin cédula")+" · "+tel+'</div></div><div class="acts"><button class="btn ghost" data-ed="'+p.id+'">Editar</button><button class="btn ghost" data-del="'+p.id+'">Quitar</button></div></div><div class="medit" id="me-'+p.id+'" hidden></div></div>'}).join(""):'<p class="empty">Todavía no ha añadido militantes.</p>';
   }
-  $("cxl").onclick=async function(){
-    if(!MINE.length){toast("Todavía no tiene militantes para descargar");return}
-    var b=this,old=b.textContent;b.disabled=true;b.textContent="Preparando…";
-    try{
-      var jefe=ME.rol==="jefe";
-      var rows=MINE.map(function(p){return pRow(jefe?"":ME.nombre,jefe?ME.nombre:"",p,p.creado)});
-      if(!jefe&&!$("cSub").hidden){
-        for(var i=0;i<SUBS.length;i++){
-          var r=await sb.rpc("militantes_de",{p_coord:SUBS[i].id});if(r.error)throw r.error;
-          (r.data||[]).forEach(function(p){rows.push(pRow(ME.nombre,SUBS[i].nombre,p,p.creado))})}}
-      await saveXlsx("militantes-"+slug(ME.nombre)+"-"+hoy()+".xlsx",HEAD,rows);toast("Excel descargado: "+rows.length+" militantes")
-    }catch(x){toast(errMsg(x))}
-    b.disabled=false;b.textContent=old};
+  function mineById(id){return MINE.filter(function(p){return String(p.id)===String(id)})[0]}
+  function openEdit(id){
+    var box=$("me-"+id),p=mineById(id);if(!box||!p)return;
+    if(!box.hidden){box.hidden=true;return}
+    var fuera=p.estado==="Fuera del padrón";
+    box.innerHTML='<form class="fld" data-medit="'+id+'" autocomplete="off"><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" placeholder="000-000-0000" value="'+esc(fmtCel(p.celular))+'" required></div><div class="cf"><div><label>Apodo (opcional)</label><input name="a" maxlength="60" value="'+esc(p.apodo||"")+'"></div><div><label>Dirección (opcional)</label><input name="d" maxlength="200" value="'+esc(p.direccion||"")+'"></div></div>'+
+      (fuera?'<div class="cf"><div><label>Recinto</label><input name="r" maxlength="80" value="'+esc(p.recinto==="Fuera del padrón"?"":p.recinto||"")+'"></div><div><label>Colegio</label><input name="c2" maxlength="20" value="'+esc(p.colegio||"")+'"></div></div>':'<p class="hint">El nombre, la cédula, el recinto y el colegio vienen del padrón y no se cambian.</p>')+
+      '<div class="acts" style="justify-content:stretch"><button class="btn" style="flex:1" type="submit">Guardar</button><button class="btn ghost" style="flex:1" type="button" data-edx="'+id+'">Cancelar</button></div></form>';
+    box.hidden=false}
+  $("cxl").onclick=function(){var b=this;withBusy(b,async function(){
+    var jefe=ME.rol==="jefe",info=await datosPersona(ME.cedula);
+    var gs=[{tipo:jefe?"Subcoordinador":"Coordinador",padre:"",nombre:ME.nombre,cedula:ME.cedula,telefono:ME.telefono,recinto:info.recinto||ME.recinto||"",colegio:info.colegio||"",fecha:ME.creado,
+      mil:MINE.slice().reverse().map(function(p){return mRow(p,p.creado)})}];
+    if(!jefe&&!$("cSub").hidden){
+      var fr={};try{var rf=await sb.rpc("fechas_comites");(rf.data||[]).forEach(function(x){fr[x.id]=x.creado})}catch(e){}
+      for(var i=0;i<SUBS.length;i++){
+        var s=SUBS[i],r=await sb.rpc("militantes_de",{p_coord:s.id});if(r.error)throw r.error;
+        var si=await datosPersona(s.cedula);
+        gs.push({tipo:"Subcoordinador",padre:ME.nombre,nombre:s.nombre,cedula:s.cedula,telefono:s.telefono,recinto:si.recinto||s.recinto||"",colegio:si.colegio||"",fecha:fr[s.id],
+          mil:(r.data||[]).slice().reverse().map(function(p){return mRow(p,p.creado)})})}}
+    printReport("Informe de "+ME.nombre,gs)})};
 
   /* ---------- subcoordinadores (los maneja el coordinador) ---------- */
   var SUBS=[],SOPEN=null;
@@ -530,13 +606,13 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(!keep&&SOPEN===id){box.hidden=true;SOPEN=null;return}
     if(SOPEN&&SOPEN!==id){var o=$("sd-"+SOPEN);if(o)o.hidden=true}
     SOPEN=id;var s=subById(id);box.hidden=false;
-    box.innerHTML='<form class="fld" data-sedit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(s.nombre)+'" required></div><div class="cf"><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(s.telefono||"")+'"></div><div><label>Zona o sector</label><input name="z" value="'+esc(s.zona||"")+'"></div></div><p class="hint">Cambiar el nombre aquí no cambia su usuario de entrada.</p><button class="btn wide" type="submit">Guardar cambios</button></form>'+
+    box.innerHTML='<form class="fld" data-sedit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(s.nombre)+'" required></div><div class="cf"><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(s.telefono||"")+'" required></div><div><label>Zona o sector</label><input name="z" value="'+esc(s.zona||"")+'"></div></div><p class="hint">Cambiar el nombre aquí no cambia su usuario de entrada.</p><button class="btn wide" type="submit">Guardar cambios</button></form>'+
       '<div class="acts" style="justify-content:stretch;margin-top:10px"><button class="btn ghost" style="flex:1" data-srst="'+id+'">Clave = su cédula</button><button class="btn ghost" style="flex:1" data-sact="'+id+'">'+(s.activo?"Desactivar":"Activar")+'</button></div>'+
       '<h3 class="mh">Sus militantes</h3><div id="sm-'+id+'"><p class="empty">Cargando…</p></div>';
     var r=await sb.rpc("militantes_de",{p_coord:id}),ml=$("sm-"+id);if(!ml)return;
     if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     ml.innerHTML=(r.data||[]).map(function(p){
-      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:""].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+(p.celular?" · "+esc(fmtCel(p.celular)):"")+'</div></div><button class="btn ghost" data-sq="'+p.id+'" data-sc="'+id+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
+      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:""].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+(p.celular?" · "+esc(fmtCel(p.celular)):"")+'</div></div><button class="btn ghost" data-sq="'+p.id+'" data-sc="'+id+'" data-nm="'+esc(p.nombre)+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
   }
   function jefeArgs(s,over){return Object.assign({p_id:s.id,p_nombre:s.nombre,p_zona:s.zona||"",p_telefono:s.telefono||"",p_activo:s.activo,p_cedula:s.cedula||"",p_cargo:s.cargo||"",p_provincia:s.provincia||"",p_municipio:s.municipio||"",p_recinto:s.recinto||""},over||{})}
   $("snb").onclick=function(){var f=$("fSub");f.hidden=!f.hidden;$("snew").innerHTML="";if(!f.hidden)$("snom").focus()};
@@ -546,7 +622,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     e.preventDefault();if(busy)return;busy=true;$("sgo").disabled=true;
     var nom=$("snom").value.trim().replace(/\s+/g," "),tel=$("stel").value;
     try{
-      var c=await crearCuenta(nom,$("sced").value);
+      var c=await crearCuenta(nom,$("sced").value,tel);
       var r=await sb.rpc("crear_jefe",{p_id:c.id,p_nombre:nom,p_zona:$("szon").value.trim(),p_telefono:tel,p_cedula:c.ced});
       if(r.error)throw r.error;
       $("fSub").reset();$("fSub").hidden=true;
@@ -567,7 +643,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var a=r.data||[];
     $("res").innerHTML=a.length?a.map(function(p){
       var b;if(p.mio)b='<span class="pill ok">Ya es suyo</span>';else if(p.tomado_por)b='<span class="pill no">Lo tiene '+esc(p.tomado_por)+"</span>";else b='<button class="btn" data-add="'+p.id+'">Añadir</button>';
-      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:"",p.estado].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+"</div></div>"+b+"</div>"}).join(""):'<p class="empty">No aparece en el padrón.</p>';
+      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:""].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+"</div></div>"+b+"</div>"}).join(""):'<p class="empty">No aparece en el padrón.</p>';
   }
   $("q").oninput=function(){clearTimeout(sT);sT=setTimeout(doSearch,350)};
 
@@ -612,19 +688,19 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(OPEN&&OPEN!==id){var o=$("cd-"+OPEN);if(o)o.hidden=true}
     OPEN=id;var c=COO[id];box.hidden=false;
     var js=jefesDe(id);
-    box.innerHTML='<form class="fld" data-edit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(c.nombre)+'" required></div><div><label>Cédula</label><input name="c" inputmode="numeric" maxlength="13" placeholder="000-0000000-0" value="'+esc(c.cedula||"")+'"></div><div class="cf"><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'"></div><div><label>Zona</label><input name="z" value="'+esc(c.zona||"")+'"></div></div><label class="chk"><input type="checkbox" name="pc"'+(c.puede_comites?" checked":"")+'> Puede crear subcoordinadores</label><p class="hint">Cambiar el nombre aquí no cambia su usuario de entrada.</p><button class="btn wide" type="submit">Guardar cambios</button></form>'+
+    box.innerHTML='<form class="fld" data-edit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(c.nombre)+'" required></div><div><label>Cédula</label><input name="c" inputmode="numeric" maxlength="13" placeholder="000-0000000-0" value="'+esc(c.cedula||"")+'" required></div><div class="cf"><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'" required></div><div><label>Zona</label><input name="z" value="'+esc(c.zona||"")+'"></div></div><label class="chk"><input type="checkbox" name="pc"'+(c.puede_comites?" checked":"")+'> Puede crear subcoordinadores</label><p class="hint">Cambiar el nombre aquí no cambia su usuario de entrada.</p><button class="btn wide" type="submit">Guardar cambios</button></form>'+
       '<button class="btn ghost wide" style="margin-top:10px" data-rc="'+id+'">Restablecer clave a su cédula</button>'+
       '<h3 class="mh">Subcoordinadores ('+js.length+')</h3>'+(js.length?js.map(function(j){
         return '<div class="row"><div><div class="nm">'+esc(j.nombre)+(j.activo?"":" (desactivado)")+'</div><div class="sub">'+j.n+" militantes"+(j.telefono?" · "+esc(j.telefono):"")+'</div></div><button class="btn ghost" data-rc="'+j.id+'">Clave = cédula</button></div>'}).join(""):'<p class="empty">No tiene subcoordinadores.</p>')+
-      '<h3 class="mh">Militantes propios</h3><button class="btn ghost wide" data-xl="'+id+'" style="margin-bottom:6px">Descargar en Excel (con los de sus subcoordinadores)</button><div id="ml-'+id+'"><p class="empty">Cargando…</p></div>';
+      '<h3 class="mh">Militantes propios</h3><button class="btn wide" data-pdf="'+id+'" style="margin-bottom:6px">Informe en PDF (con sus subcoordinadores)</button><div id="ml-'+id+'"><p class="empty">Cargando…</p></div>';
     var r=await sb.from("seguidores").select("padron_id,creado,padron(nombre,cedula,recinto,colegio,celular)").eq("coord_id",id).order("creado",{ascending:false});
     var ml=$("ml-"+id);if(!ml)return;
     if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     ml.innerHTML=(r.data||[]).map(function(x){var p=x.padron||{};
-      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:""].filter(Boolean).join(" · "))+"<br>"+esc(cv(p.cedula)||"Sin cédula")+(p.celular?" · "+esc(fmtCel(p.celular)):"")+'</div></div><button class="btn ghost" data-aq="'+x.padron_id+'" data-co="'+id+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
+      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:""].filter(Boolean).join(" · "))+"<br>"+esc(cv(p.cedula)||"Sin cédula")+(p.celular?" · "+esc(fmtCel(p.celular)):"")+'</div></div><button class="btn ghost" data-aq="'+x.padron_id+'" data-co="'+id+'" data-nm="'+esc(p.nombre)+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
   }
   $("rfs").onclick=function(){loadRes();loadHist()};
-  $("axl").onclick=function(){exportAdmin(this,null)};
+  $("axl").onclick=function(){reportAdmin(this,null)};
   function fmtC(v){var d=String(v).replace(/\D/g,"").slice(0,11);return d.length>10?d.slice(0,3)+"-"+d.slice(3,10)+"-"+d.slice(10):d.length>3?d.slice(0,3)+"-"+d.slice(3):d}
   $("ced").oninput=function(){this.value=fmtC(this.value)};
   $("ctel").oninput=function(){this.value=fmtT(this.value)};
@@ -632,7 +708,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     e.preventDefault();if(busy)return;busy=true;$("cadd").disabled=true;$("cnew").innerHTML="";
     var nom=$("cnom").value.trim().replace(/\s+/g," "),tel=$("ctel").value;
     try{
-      var c=await crearCuenta(nom,$("ced").value);
+      var c=await crearCuenta(nom,$("ced").value,tel);
       var p=await sb.from("perfiles").insert({id:c.id,nombre:nom,cedula:c.ced,zona:$("czon").value.trim(),telefono:tel,rol:"coordinador",puede_comites:$("cperm").checked});
       if(p.error)throw p.error;
       $("fCoo").reset();
@@ -718,7 +794,11 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var t=e.target,g=function(a){return t.getAttribute&&t.getAttribute(a)};
     if(g("data-tab")){tab(g("data-tab"));return}
     if(g("data-ver")){openDet(g("data-ver"));return}
-    if(g("data-xl")){exportAdmin(t,g("data-xl"));return}
+    if(g("data-pdf")){reportAdmin(t,g("data-pdf"));return}
+    if(g("data-ed")){openEdit(g("data-ed"));return}
+    if(g("data-edx")){var bx=$("me-"+g("data-edx"));if(bx)bx.hidden=true;return}
+    var nm=g("data-nm");
+    if((g("data-sq")||g("data-aq"))&&!confirm("¿Quitar a "+(nm||"esta persona")+" de la lista?\n\nPodrá volver a añadirla después si hace falta."))return;
     if(g("data-rc")){var rc=g("data-rc"),pp=COO[rc]||JEF[rc]||{};resetCed(rc,pp.cedula);return}
     if(g("data-sv")){openSub(g("data-sv"));return}
     if(g("data-srst")){var s1=subById(g("data-srst"));if(s1)resetCed(s1.id,s1.cedula);return}
@@ -733,22 +813,34 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(g("data-add")){t.disabled=true;var r=await sb.rpc("anadir_seguidor",{p_id:+g("data-add")});
       if(r.error)toast(errMsg(r.error));else if(r.data==="ok")toast("Añadido");else if(r.data==="ya_tomado")toast("Esa persona ya la tiene otro coordinador");
       loadMine();doSearch();return}
-    if(g("data-del")){var r2=await sb.rpc("quitar_seguidor",{p_id:+g("data-del")});if(r2.error)toast(errMsg(r2.error));else toast("Quitado de su lista");loadMine();doSearch()}
+    if(g("data-del")){var pm=mineById(g("data-del"));
+      if(!confirm("¿Quitar a "+(pm?pm.nombre:"esta persona")+" de su lista?\n\nPodrá volver a añadirla después si hace falta."))return;
+      var r2=await sb.rpc("quitar_seguidor",{p_id:+g("data-del")});if(r2.error)toast(errMsg(r2.error));else toast("Quitado de su lista");loadMine();doSearch()}
   });
-  document.addEventListener("input",function(e){var t=e.target;if(!t.closest||!t.closest("[data-edit],[data-sedit]"))return;
+  document.addEventListener("input",function(e){var t=e.target;if(!t.closest||!t.closest("[data-edit],[data-sedit],[data-medit]"))return;
     if(t.name==="t")t.value=fmtT(t.value);if(t.name==="c")t.value=fmtC(t.value)});
   document.addEventListener("submit",async function(e){
     var f=e.target;if(!f.getAttribute)return;
+    if(f.getAttribute("data-medit")){
+      e.preventDefault();var mid=f.getAttribute("data-medit"),el=f.elements;
+      if(digits(el.t.value).length!==10){toast("El teléfono debe tener 10 números");return}
+      var bt=f.querySelector("[type=submit]");bt.disabled=true;
+      var rm=await sb.rpc("editar_militante",{p_id:+mid,p_tel:el.t.value,p_dir:el.d.value,p_apodo:el.a.value,p_recinto:el.r?el.r.value:"",p_colegio:el.c2?el.c2.value:""});
+      bt.disabled=false;
+      if(rm.error){toast(falta(rm.error)?"Falta pegar en Supabase el archivo cambios_v13.sql":errMsg(rm.error));return}
+      toast("Datos actualizados");loadMine();return}
     if(f.getAttribute("data-sedit")){
       e.preventDefault();var s=subById(f.getAttribute("data-sedit")),sn=f.elements.n.value.trim();
       if(!s)return;if(sn.length<3){toast("Escriba el nombre");return}
+      if(digits(f.elements.t.value).length!==10){toast("El teléfono debe tener 10 números");return}
       var rs=await sb.rpc("editar_jefe",jefeArgs(s,{p_nombre:sn,p_telefono:f.elements.t.value,p_zona:f.elements.z.value.trim()}));
       if(rs.error){toast(errMsg(rs.error));return}
       toast("Cambios guardados");loadSubs();return}
     if(!f.getAttribute("data-edit"))return;
     e.preventDefault();var id=f.getAttribute("data-edit"),n=f.elements.n.value.trim(),cd=digits(f.elements.c.value);
     if(!n){toast("Escriba el nombre");return}
-    if(cd&&cd.length!==11){toast("La cédula debe tener 11 números");return}
+    if(cd.length!==11){toast("La cédula debe tener 11 números");return}
+    if(digits(f.elements.t.value).length!==10){toast("El teléfono debe tener 10 números");return}
     var r=await sb.from("perfiles").update({nombre:n,cedula:cd?fmtC(cd):"",zona:f.elements.z.value.trim(),telefono:f.elements.t.value,puede_comites:f.elements.pc.checked}).eq("id",id);
     if(r.error){toast(errMsg(r.error));return}
     toast("Cambios guardados");loadRes()
