@@ -97,6 +97,30 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .chk input{width:22px;height:22px;flex:none;margin:0}
 .hint{font-size:13px;color:var(--mute);margin:0}
 .medit{background:var(--tile);border-radius:8px;padding:12px;margin:0 0 10px}
+/* ---- tablero de coordinadores ---- */
+.dtop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:16px 0 4px}
+.dc{border:1px solid var(--line);border-radius:10px;margin:0 0 8px;background:var(--card);overflow:hidden}
+.dc>summary{list-style:none;cursor:pointer;padding:11px 12px;display:flex;align-items:center;gap:10px}
+.dc>summary::-webkit-details-marker{display:none}
+.dc>summary::after{content:"";flex:none;width:9px;height:9px;border-right:2px solid var(--mute);border-bottom:2px solid var(--mute);transform:rotate(45deg);margin:-4px 2px 0 4px;transition:transform .15s}
+.dc[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
+.dc[open]>summary{border-bottom:1px solid var(--line);background:var(--tile)}
+.dc .dn{flex:1;min-width:0}
+.dc .cnt{flex:none;min-width:38px;text-align:center;font:700 20px/1 var(--disp);color:var(--brand-ink);background:var(--brand);border-radius:8px;padding:6px 8px}
+.dc.off .cnt{background:var(--mute)}
+.dc .mbar{height:6px;background:var(--tile);border-radius:4px;overflow:hidden;margin-top:6px}
+.dc .mbar i{display:block;height:100%;background:var(--ok)}
+.dcb{padding:4px 12px 12px}
+.dcb .dc{margin-top:8px;border-style:dashed}
+.dcb .dc .cnt{font-size:17px;background:var(--tile);color:var(--brand);border:1px solid var(--line)}
+.mi{padding:9px 0;border-top:1px solid var(--line)}
+.mi:first-child{border-top:0}
+.mi .sub a{color:var(--brand);font-weight:600}
+.dact{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 2px}
+.dact .btn{flex:1}
+.fold{border:1px solid var(--line);border-radius:10px;margin-top:12px;padding:0 12px}
+.fold>summary{cursor:pointer;padding:12px 0;font:700 18px var(--disp)}
+.fold[open]>summary{border-bottom:1px solid var(--line);margin-bottom:6px}
 /* ---- informe para imprimir / guardar como PDF ---- */
 #printArea{display:none}
 @page{size:A4;margin:12mm 10mm}
@@ -225,14 +249,19 @@ a.btn{display:block;text-align:center;text-decoration:none}
           <div class="t"><b id="aC">0</b><span>Coordinadores activos</span></div>
         </div>
         <p class="sub" id="aP" style="margin:10px 0 0"></p>
-        <h2 style="margin-top:16px">Militantes por coordinador</h2><div id="byC"></div>
-        <h2 style="margin-top:16px">Por recinto</h2><div id="byR"></div>
-        <h2 style="margin-top:16px">Últimos registros</h2><div id="last"></div>
-        <button id="rfs" class="btn ghost wide" style="margin-top:12px">Actualizar</button>
-        <button id="axl" class="btn wide" style="margin-top:10px">Informe completo en PDF</button>
-        <h2 style="margin-top:16px">Historial de cambios</h2>
-        <p class="sub" style="margin:0 0 4px">Quién añadió o quitó a cada militante (últimos 50).</p>
-        <div id="hist"></div>
+        <div class="dtop">
+          <h2 style="margin:0">Coordinadores</h2>
+          <button id="rfs" class="btn ghost" title="Actualizar">↻ Actualizar</button>
+        </div>
+        <p class="hint" style="margin:0 0 8px">Toque un nombre para ver sus militantes.</p>
+        <input id="dq" type="search" placeholder="Buscar coordinador…" autocomplete="off">
+        <div id="dash" style="margin-top:8px"></div>
+        <button id="axl" class="btn wide" style="margin-top:12px">Informe completo en PDF</button>
+        <details class="fold"><summary>Últimos registros</summary><div id="last"></div></details>
+        <details class="fold"><summary>Historial de cambios</summary>
+          <p class="hint" style="margin:0 0 4px">Quién añadió o quitó a cada militante (últimos 50).</p>
+          <div id="hist"></div>
+        </details>
       </div>
 
       <div id="tCoo" hidden>
@@ -294,7 +323,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 25-oct-2026 (13)</p>
+  <p class="ver" id="ver">Versión 25-oct-2026 (14)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -653,19 +682,54 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     document.querySelectorAll("[data-tab]").forEach(function(b){b.setAttribute("aria-pressed",b.getAttribute("data-tab")===t)});
     if(t==="res"||t==="coo")loadRes();if(t==="res")loadHist();if(t==="pad")loadPadCount();if(t==="aju")drawAju();
   }
-  function barList(names,vals){var mx=Math.max.apply(null,vals.concat([1]));return names.map(function(n,i){return '<div class="bl"><div class="top"><span>'+esc(n)+"</span><b>"+vals[i]+'</b></div><div class="bar"><i style="width:'+(vals[i]/mx*100)+'%"></i></div></div>'}).join("")||'<p class="empty">Sin datos.</p>'}
+  /* ---------- tablero: coordinadores → (subcoordinadores) → militantes ---------- */
+  var META=0;
+  function dcHtml(p,esJ){
+    var nj=esJ?0:jefesDe(p.id).length,meta=Number(p.meta||META||0),n=Number(p.n||0);
+    var info=[esJ?"Subcoordinador":(p.zona||""),nj?nj+" subcoord.":"",esJ?"":(p.propios!=null&&nj?p.propios+" propios":""),p.activo?"":"Desactivado"].filter(Boolean).join(" · ");
+    return '<details class="dc'+(p.activo?"":" off")+'" data-cid="'+p.id+'" data-q="'+esc(String(p.nombre||"").toLowerCase())+'"><summary><div class="dn"><div class="nm">'+esc(p.nombre)+'</div>'+(info?'<div class="sub">'+esc(info)+"</div>":"")+
+      (meta>0?'<div class="mbar" title="Meta: '+meta+'"><i style="width:'+Math.min(100,n/meta*100)+'%"></i></div><div class="sub">'+n+" de "+meta+" (meta)</div>":"")+
+      '</div><span class="cnt">'+n+'</span></summary><div class="dcb" id="db-'+p.id+'"><p class="empty">Cargando…</p></div></details>'}
+  function miHtml(p,creado){
+    var tel=p.celular?'<a href="tel:'+esc(digits(p.celular))+'">'+esc(fmtCel(p.celular))+"</a>":'<span style="color:var(--bad)">Sin teléfono</span>';
+    return '<div class="mi"><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(cv(p.cedula)||"Sin cédula")+" · "+tel+"<br>"+esc([p.recinto,p.colegio?"Colegio "+p.colegio:"",fecha(creado)].filter(Boolean).join(" · "))+"</div></div>"}
+  function renderDash(){
+    var open=[].map.call(document.querySelectorAll("#dash details[open]"),function(d){return d.getAttribute("data-cid")});
+    var co=Object.keys(COO).map(function(k){return COO[k]}).sort(function(a,b){return (b.activo-a.activo)||(b.n-a.n)||a.nombre.localeCompare(b.nombre)});
+    $("dash").innerHTML=co.length?co.map(function(c){return dcHtml(c,false)}).join(""):'<p class="empty">Todavía no hay coordinadores.</p>';
+    filtrarDash();
+    open.forEach(function(id){var d=document.querySelector('#dash details[data-cid="'+id+'"]');if(d)d.open=true})}
+  function filtrarDash(){
+    var q=$("dq").value.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+    document.querySelectorAll("#dash>details").forEach(function(d){
+      var t=d.getAttribute("data-q").normalize("NFD").replace(/[̀-ͯ]/g,"");
+      d.hidden=!!q&&t.indexOf(q)<0})}
+  $("dq").oninput=filtrarDash;
+  async function loadDash(id){
+    var box=$("db-"+id);if(!box)return;
+    var esJ=!!JEF[id];
+    var r=await sb.from("seguidores").select("creado,padron(nombre,cedula,recinto,colegio,celular)").eq("coord_id",id).order("creado",{ascending:false});
+    if(r.error){box.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
+    var a=r.data||[],js=esJ?[]:jefesDe(id);
+    box.innerHTML=(esJ?"":'<div class="dact"><button class="btn" data-pdf="'+id+'">Informe PDF</button><button class="btn ghost" data-goc="'+id+'">Editar coordinador</button></div>')+
+      (js.length?'<h3 class="mh">Subcoordinadores ('+js.length+")</h3>"+js.map(function(j){return dcHtml(j,true)}).join(""):"")+
+      '<h3 class="mh">'+(js.length?"Militantes propios":"Militantes")+" ("+a.length+")</h3>"+
+      (a.length?a.map(function(x){return miHtml(x.padron||{},x.creado)}).join(""):'<p class="empty">Todavía no ha inscrito militantes.</p>')}
+  document.addEventListener("toggle",function(e){
+    var d=e.target;if(!d.classList||!d.classList.contains("dc")||!d.open)return;
+    loadDash(d.getAttribute("data-cid"))},true);
   async function loadRes(){
     var r=await sb.rpc("resumen");
     if(r.error){toast(errMsg(r.error));return}
     var d=r.data,co=d.coordinadores||[],act=co.filter(function(c){return c.activo}).length;
     $("aS").textContent=d.seguidores;$("aC").textContent=act;
     $("aP").textContent="Personas en el padrón: "+d.padron+(d.padron?" · Cubierto: "+(d.seguidores/d.padron*100).toFixed(1)+"%":"");
-    $("byC").innerHTML=barList(co.map(function(c){return c.nombre+(c.zona?" · "+c.zona:"")}),co.map(function(c){return c.n}));
-    var rc=d.recintos||[];$("byR").innerHTML=barList(rc.map(function(x){return x.recinto}),rc.map(function(x){return x.n}));
     $("last").innerHTML=(d.ultimos||[]).map(function(x){
       return '<div class="row"><div><div class="nm">'+esc(x.nombre)+'</div><div class="sub">'+esc(x.coord)+" · "+hace(x.creado)+"</div></div></div>"}).join("")||'<p class="empty">Sin registros.</p>';
     COO={};co.forEach(function(c){COO[c.id]=c});
     JEF={};(d.jefes||[]).forEach(function(j){JEF[j.id]=j});
+    META=Number(d.meta||0);
+    renderDash();
     $("clist").innerHTML=co.map(function(c){
       var nj=jefesDe(c.id).length;
       return '<div class="cw"><div class="row"><div><div class="nm">'+esc(c.nombre)+(c.activo?"":" (desactivado)")+'</div><div class="sub">'+esc([c.zona,c.telefono].filter(Boolean).join(" · ")||"Sin zona ni teléfono")+" · "+c.n+" militantes"+(nj?" · "+nj+" subcoord.":"")+(c.puede_comites?" · Puede crear subcoord.":"")+'</div></div>'+
@@ -795,6 +859,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(g("data-tab")){tab(g("data-tab"));return}
     if(g("data-ver")){openDet(g("data-ver"));return}
     if(g("data-pdf")){reportAdmin(t,g("data-pdf"));return}
+    if(g("data-goc")){var gid=g("data-goc");OPEN=gid;tab("coo");
+      setTimeout(function(){var el=$("cd-"+gid);if(el)el.scrollIntoView({behavior:"smooth",block:"start"})},900);return}
     if(g("data-ed")){openEdit(g("data-ed"));return}
     if(g("data-edx")){var bx=$("me-"+g("data-edx"));if(bx)bx.hidden=true;return}
     var nm=g("data-nm");
