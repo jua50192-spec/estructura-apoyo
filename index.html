@@ -316,7 +316,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
         <div id="zstat"></div>
         <form id="fZon" class="fld" autocomplete="off" style="margin-top:12px">
           <div class="cf">
-            <div><label for="znum">Zona</label><input id="znum" maxlength="20" autocapitalize="characters" autocomplete="off" placeholder="Ej. 3A" required></div>
+            <div><label for="znum">Zona</label><input id="znum" maxlength="4" autocapitalize="characters" autocomplete="off" placeholder="Ej. B-2" required></div>
             <div><label for="znom">Nombre (barrio o sector)</label><input id="znom" maxlength="60"></div>
           </div>
           <button class="btn wide" id="zgo" type="submit">Crear zona</button>
@@ -378,7 +378,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 26-oct-2026 (19)</p>
+  <p class="ver" id="ver">Versión 26-oct-2026 (20)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -467,7 +467,10 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   var ZONAS=[],ZREC={},ZOK=false,MIZONA=null,RECS=[],SRES={},ZOPEN=null;
   var VFTXT="Debe ser confirmado en VERIFICATE para poder votar en la interna.";
   function zonaPor(id){id=Number(id);return ZONAS.filter(function(z){return z.id===id})[0]}
-  function zCod(v){return String(v||"").trim().replace(/^zona\s*/i,"").replace(/\s+/g," ").toUpperCase().slice(0,20)}
+  /* Zona: una letra mayúscula, guion y número (B-2). El guion lo pone la app. */
+  function zFmt(v){var s=String(v||"").toUpperCase().replace(/^ZONA/,"").replace(/[^A-Z0-9]/g,""),m=/^([A-Z])(\d{0,2})/.exec(s);return m?m[1]+(m[2]?"-"+m[2]:""):""}
+  function zCod(v){var s=zFmt(v);return /^[A-Z]-\d{1,2}$/.test(s)?s:""}
+  var ZERR="Escriba la zona así: una letra y el número, por ejemplo B-2";
   function zMsg(e,cod){var m=(e&&e.message)||"";return /duplicate|unique/i.test(m)?"Ya existe la zona "+cod:/integer|numeric/i.test(m)?"Para usar letras en la zona falta pegar en Supabase el archivo zonas-codigo.sql":errMsg(e)}
   function zLabel(id){var z=zonaPor(id);return z?"Zona "+z.numero+(z.nombre?" – "+z.nombre:""):""}
   function zCorta(rec){var z=zonaPor(ZREC[rec]);return z?"Zona "+z.numero:""}
@@ -912,7 +915,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   function zonaBody(x){
     var z=x.z,mine=RECS.filter(function(r){return ZREC[r.recinto]===z.id}),libres=RECS.filter(function(r){return !ZREC[r.recinto]});
     var chk=function(r,on){return '<label class="zr"><input type="checkbox" name="rec" value="'+esc(r.recinto)+'"'+(on?" checked":"")+"><span>"+esc(r.recinto)+' <span class="sub">· '+r.personas+" personas</span></span></label>"};
-    return '<form class="fld" data-zedit="'+z.id+'" autocomplete="off" style="margin-top:8px"><div class="cf"><div><label>Zona</label><input name="num" maxlength="20" autocapitalize="characters" autocomplete="off" value="'+esc(z.numero)+'" required></div><div><label>Nombre</label><input name="nom" maxlength="60" value="'+esc(z.nombre)+'"></div></div>'+
+    return '<form class="fld" data-zedit="'+z.id+'" autocomplete="off" style="margin-top:8px"><div class="cf"><div><label>Zona</label><input name="num" maxlength="4" autocapitalize="characters" autocomplete="off" value="'+esc(z.numero)+'" required></div><div><label>Nombre</label><input name="nom" maxlength="60" value="'+esc(z.nombre)+'"></div></div>'+
       '<h3 class="mh">Recintos de esta zona ('+mine.length+")</h3>"+(mine.length?'<p class="hint">Desmarque el que no sea de esta zona.</p>'+mine.map(function(r){return chk(r,true)}).join(""):'<p class="empty">Ninguno todavía.</p>')+
       '<h3 class="mh">Recintos sin zona ('+libres.length+")</h3>"+(libres.length?'<p class="hint">Marque los que son de esta zona.</p>'+libres.map(function(r){return chk(r,false)}).join(""):'<p class="empty">'+(RECS.length?"Todos los recintos ya tienen zona.":"Primero cargue el padrón.")+"</p>")+
       '<p class="hint">Los recintos de otras zonas no salen aquí. Para pasar uno a esta zona, desmárquelo primero en la otra.</p>'+
@@ -935,7 +938,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   document.addEventListener("toggle",function(e){var d=e.target;if(!d.getAttribute||!d.getAttribute("data-zid"))return;
     var id=+d.getAttribute("data-zid");if(d.open)ZOPEN=id;else if(ZOPEN===id)ZOPEN=null},true);
   $("fZon").onsubmit=async function(e){
-    e.preventDefault();var num=zCod($("znum").value);if(!num){toast("Escriba la zona");return}
+    e.preventDefault();var num=zCod($("znum").value);if(!num){toast(ZERR);return}
     $("zgo").disabled=true;
     var r=await sb.from("zonas").insert({numero:num,nombre:$("znom").value.trim()}).select("id").single();
     $("zgo").disabled=false;
@@ -1198,6 +1201,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       if(!confirm("¿Quitar a "+(pm?pm.nombre:"esta persona")+" de su lista?\n\nPodrá volver a añadirla después si hace falta."))return;
       var r2=await sb.rpc("quitar_seguidor",{p_id:+g("data-del")});if(r2.error)toast(errMsg(r2.error));else toast("Quitado de su lista");loadMine();doSearch()}
   });
+  document.addEventListener("input",function(e){var z=e.target;if(z.id==="znum"||(z.name==="num"&&z.closest&&z.closest("[data-zedit]"))){z.value=zFmt(z.value);return}});
   document.addEventListener("input",function(e){var t=e.target;if(!t.closest||!t.closest("[data-edit],[data-sedit],[data-medit]"))return;
     if(t.name==="t")t.value=fmtT(t.value);if(t.name==="c")t.value=fmtC(t.value)});
   document.addEventListener("submit",async function(e){
@@ -1219,7 +1223,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       toast("Cambios guardados");loadSubs();return}
     if(f.getAttribute("data-zedit")){
       e.preventDefault();var zid=+f.getAttribute("data-zedit"),num=zCod(f.elements.num.value);
-      if(!num){toast("Escriba la zona");return}
+      if(!num){toast(ZERR);return}
       var recs=[].filter.call(f.querySelectorAll('input[name="rec"]'),function(x){return x.checked}).map(function(x){return x.value});
       var bz=f.querySelector("[type=submit]");bz.disabled=true;
       try{
