@@ -98,6 +98,15 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .hint{font-size:13px;color:var(--mute);margin:0}
 .medit{background:var(--tile);border-radius:8px;padding:12px;margin:0 0 10px}
 select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+.pr{display:flex;gap:10px;align-items:flex-start;min-width:0}
+.pr>div{min-width:0}
+#mine .row{flex-wrap:wrap}
+#mine .row>.pr{flex:1 1 100%}
+#mine .acts{flex:1 1 100%;justify-content:flex-start;padding-left:54px}
+.fo{flex:none;width:44px;height:51px;border-radius:6px;object-fit:cover;background:var(--tile);border:1px solid var(--line)}
+.fo[data-ok]{cursor:zoom-in}
+.fover{position:fixed;inset:0;background:rgba(0,0,0,.78);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:30;padding:16px;color:#fff;text-align:center}
+.fover img{width:min(70vw,260px);border-radius:10px;background:#fff}
 .vf{display:inline-block;margin-top:3px;font-size:12px;font-weight:600;border-radius:6px;padding:2px 7px;background:var(--warnbg);color:var(--warn)}
 .zr{display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
 .zr:first-child{border-top:0}
@@ -318,16 +327,27 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
       <div id="tPad" hidden>
         <h2>Padrón en el servidor</h2>
         <p id="pcount" class="sub" style="margin:0 0 12px"></p>
-        <label for="pdf">Cargar padrón (PDF)</label>
-        <input id="pdf" type="file" accept="application/pdf">
-        <p class="sub" style="margin:8px 0 0">El PDF se lee en este aparato. Al terminar, usted revisa el resultado y decide si lo sube al servidor.</p>
+        <h2>Cargar padrón</h2>
+        <div class="fld">
+          <div><label for="pdf">Uno o varios PDF</label><input id="pdf" type="file" accept="application/pdf,.pdf,.PDF" multiple></div>
+          <div><label for="pdir">…o una carpeta completa (por ejemplo, un recinto o toda la circunscripción)</label><input id="pdir" type="file" webkitdirectory multiple></div>
+          <div class="cf">
+            <div><label for="pcirc">Solo la circunscripción</label><input id="pcirc" inputmode="numeric" maxlength="3" placeholder="Todas"></div>
+            <div style="align-self:end"><label class="chk"><input type="checkbox" id="pfot" checked> Subir también las fotos</label></div>
+          </div>
+          <label class="chk"><input type="checkbox" id="pforce"> Subir también los colegios marcados «Revisar»</label>
+          <p class="sub" id="psel" style="margin:0">Todavía no ha elegido archivos.</p>
+          <p class="note" id="pfnote" hidden></p>
+          <button id="pgo" class="btn wide" disabled>Leer y subir</button>
+          <button id="pstop" class="btn ghost wide" hidden>Detener</button>
+        </div>
+        <p class="sub" style="margin:8px 0 0">Los PDF se leen en este aparato y se suben colegio por colegio. Use una computadora y déjela conectada: con muchos archivos puede tardar horas. Si se corta, vuelva a elegir los mismos archivos: nada se duplica y las fotos ya subidas se saltan.</p>
         <div id="prog" class="prog" style="margin-top:10px" hidden><i></i></div>
         <p id="pmsg" class="sub" style="margin:8px 0 0"></p>
+        <div id="pres" style="margin-top:8px"></div>
         <div id="rep" hidden style="margin-top:12px">
-          <h2>Resultado de la lectura</h2>
-          <div class="tw"><table><thead><tr><th>Recinto</th><th>Colegio</th><th>Esperados</th><th>Leídos</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
-          <p class="sub" id="repn"></p>
-          <button id="up" class="btn wide">Subir al servidor</button>
+          <h2>Colegios</h2>
+          <div class="tw"><table><thead><tr><th>Recinto</th><th>Colegio</th><th>Esperados</th><th>Leídos</th><th>Fotos</th><th>Resultado</th></tr></thead><tbody id="tb"></tbody></table></div>
         </div>
         <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
         <button id="pbak" class="btn wide">Descargar respaldo de militantes</button>
@@ -358,7 +378,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 26-oct-2026 (17)</p>
+  <p class="ver" id="ver">Versión 26-oct-2026 (18)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -377,12 +397,14 @@ function parsePage(items,W){
     else runs.push({s:it.s,x:it.x,y:it.y,w:it.w,h:it.h});
   });
   var anchors=runs.filter(function(r){return /^\d{3}-\d{7}-\d(\s*\|)?$/.test(r.s)});
-  var res={rec:"",colegio:"",conf:null,rat:null,mil:null,people:[],anchors:anchors.length};
+  var res={rec:"",colegio:"",circ:"",conf:null,rat:null,mil:null,people:[],anchors:anchors.length};
   var topY=anchors.length?Math.max.apply(null,anchors.map(function(a){return a.y})):0;
   var hdr=anchors.length?runs.filter(function(r){return r.y>topY+6}):runs;
   // 2) encabezado: recinto, colegio, totales
   hdr.forEach(function(r){var m=/REC\.?:?\s*(\d+)\s+(.+)/.exec(r.s);if(m)res.rec=m[1]+" "+m[2].trim()});
   if(!res.rec){hdr.forEach(function(r,i){if(/^REC\.?:?$/.test(r.s)){var n=hdr.filter(function(q){return Math.abs(q.y-r.y)<=2&&q.x>r.x}).sort(function(a,b){return a.x-b.x})[0];if(n)res.rec=n.s}})}
+  hdr.forEach(function(r){var m=/CIRC\w*\.?:?\s*(\d+)/i.exec(r.s);if(m&&!res.circ)res.circ=m[1]});
+  if(!res.circ){hdr.forEach(function(r){if(!res.circ&&/^CIRC\w*\.?:?$/i.test(r.s)){var n=hdr.filter(function(q){return Math.abs(q.y-r.y)<=2&&q.x>r.x}).sort(function(a,b){return a.x-b.x})[0];if(n&&/^\d+$/.test(n.s))res.circ=n.s}})}
   function below(label,rx){
     var lb=hdr.filter(function(r){return r.s.toUpperCase().replace(/\s+/g," ")===label})[0];if(!lb)return null;
     var cx=lb.x+lb.w/2,best=null;
@@ -411,7 +433,7 @@ function parsePage(items,W){
         var m=new RegExp(label+"\\.?\\s*:?\\s*(\\d[\\d\\- ]*\\d)","i").exec(ln);
         return m?m[1].replace(/\D/g,""):""}
       var cel=line("Cel"),tel=line("Tel");
-      res.people.push({ced:CED.exec(a.s)[1],nombre:nm,estado:est,cel:cel,tel:tel,orden:ord?+ord.s:null});
+      res.people.push({ced:CED.exec(a.s)[1],nombre:nm,estado:est,cel:cel,tel:tel,orden:ord?+ord.s:null,ax:a.x,ay:a.y});
     });
   });
   return res;
@@ -422,8 +444,8 @@ function joinPages(pages){
   pages.forEach(function(p){
     if(!p.people.length&&!p.colegio)return;
     var k=p.rec+"|"+p.colegio;
-    if(!g[k]){g[k]={rec:p.rec,colegio:p.colegio,mil:p.mil,conf:p.conf,rat:p.rat,people:[],seen:{}};order.push(k)}
-    var G=g[k];if(G.mil==null)G.mil=p.mil;
+    if(!g[k]){g[k]={rec:p.rec,colegio:p.colegio,circ:p.circ||"",mil:p.mil,conf:p.conf,rat:p.rat,people:[],seen:{}};order.push(k)}
+    var G=g[k];if(G.mil==null)G.mil=p.mil;if(!G.circ)G.circ=p.circ||"";
     p.people.forEach(function(q){if(!G.seen[q.ced]){G.seen[q.ced]=1;q.rec=G.rec;q.colegio=G.colegio;G.people.push(q)}});
   });
   return order.map(function(k){var G=g[k];delete G.seen;
@@ -457,6 +479,26 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       if(a.error||b.error)throw a.error||b.error;
       ZONAS=a.data||[];ZREC={};(b.data||[]).forEach(function(x){ZREC[x.recinto]=x.zona_id});ZOK=true}
     catch(e){ZONAS=[];ZREC={};ZOK=false}}
+  var FURL={},FOK=null,PIX="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+  function foto(id){return FOK===false||!id?"":'<img class="fo" data-fid="'+esc(id)+'" src="'+PIX+'" alt="">'}
+  /* Pide las fotos que se ven en pantalla, en grupos, con enlaces que vencen en una hora. */
+  async function cargarFotos(box){
+    if(FOK===false||!box)return;
+    var els=[].slice.call(box.querySelectorAll("img.fo[data-fid]:not([data-v])"));if(!els.length)return;
+    var now=Date.now(),need=[];
+    els.forEach(function(e){var id=e.getAttribute("data-fid"),c=FURL[id];if(!(c&&c.exp>now)&&need.indexOf(id)<0)need.push(id)});
+    for(var i=0;i<need.length;i+=100){
+      var part=need.slice(i,i+100),r;
+      try{r=await sb.storage.from("fotos").createSignedUrls(part.map(function(id){return id+".jpg"}),3600)}catch(x){return}
+      if(r.error){if(/not.?found|bucket/i.test(r.error.message||""))FOK=false;return}
+      part.forEach(function(id){FURL[id]={url:null,exp:now+50*60000}});
+      (r.data||[]).forEach(function(x){var id=String(x.path||"").split(".")[0];if(FURL[id]&&!x.error&&x.signedUrl)FURL[id].url=x.signedUrl})}
+    els.forEach(function(e){var c=FURL[e.getAttribute("data-fid")];e.setAttribute("data-v","1");if(c&&c.url){e.src=c.url;e.setAttribute("data-ok","1")}})}
+  function verFoto(img){
+    var c=FURL[img.getAttribute("data-fid")];if(!c||!c.url)return;
+    var o=document.createElement("div");o.className="fover";
+    o.innerHTML='<img src="'+esc(c.url)+'" alt=""><span>Toque para cerrar</span>';
+    o.onclick=function(){o.remove()};document.body.appendChild(o)}
   function showAviso(nm){var a=$("avis");
     a.innerHTML="<b>⚠ "+esc(nm)+" está «A confirmar».</b><br>"+VFTXT+'<br><button class="btn ghost" style="margin-top:8px" data-avx="1">Entendido</button>';
     a.hidden=false;a.scrollIntoView({behavior:"smooth",block:"center"})}
@@ -655,7 +697,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var puedeSub=ME.rol==="coordinador"&&!!ME.puede_comites;
     $("mine").innerHTML=a.length?a.map(function(p){
       var tel=p.celular?'<a href="tel:'+esc(p.celular)+'">'+esc(fmtCel(p.celular))+"</a>":'<span style="color:var(--bad)">Sin teléfono</span>';
-      return '<div class="cw"><div class="row"><div><div class="nm">'+esc(p.nombre)+(p.apodo?' <span class="sub">('+esc(p.apodo)+")</span>":"")+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula||"Sin cédula")+" · "+tel+vfTag(p)+'</div></div><div class="acts"><button class="btn ghost" data-ed="'+p.id+'">Editar</button><button class="btn ghost" data-del="'+p.id+'">Quitar</button>'+(puedeSub?'<button class="btn ghost" data-hsub="'+p.id+'">Hacer subcoordinador</button>':"")+'</div></div><div class="medit" id="me-'+p.id+'" hidden></div></div>'}).join(""):'<p class="empty">Todavía no ha añadido militantes.</p>';
+      return '<div class="cw"><div class="row"><div class="pr">'+foto(p.id)+'<div><div class="nm">'+esc(p.nombre)+(p.apodo?' <span class="sub">('+esc(p.apodo)+")</span>":"")+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula||"Sin cédula")+" · "+tel+vfTag(p)+'</div></div></div><div class="acts"><button class="btn ghost" data-ed="'+p.id+'">Editar</button><button class="btn ghost" data-del="'+p.id+'">Quitar</button>'+(puedeSub?'<button class="btn ghost" data-hsub="'+p.id+'">Hacer subcoordinador</button>':"")+'</div></div><div class="medit" id="me-'+p.id+'" hidden></div></div>'}).join(""):'<p class="empty">Todavía no ha añadido militantes.</p>';
+    cargarFotos($("mine"));
   }
   function mineById(id){return MINE.filter(function(p){return String(p.id)===String(id)})[0]}
   /* Subir un militante a subcoordinador: llena el formulario de siempre con sus datos.
@@ -718,7 +761,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var r=await sb.rpc("militantes_de",{p_coord:id}),ml=$("sm-"+id);if(!ml)return;
     if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     ml.innerHTML=(r.data||[]).map(function(p){
-      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula)+(p.celular?" · "+esc(fmtCel(p.celular)):"")+vfTag(p)+'</div></div><button class="btn ghost" data-sq="'+p.id+'" data-sc="'+id+'" data-nm="'+esc(p.nombre)+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
+      return '<div class="row"><div class="pr">'+foto(p.id)+'<div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula)+(p.celular?" · "+esc(fmtCel(p.celular)):"")+vfTag(p)+'</div></div></div><button class="btn ghost" data-sq="'+p.id+'" data-sc="'+id+'" data-nm="'+esc(p.nombre)+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
+    cargarFotos(ml);
   }
   function jefeArgs(s,over){return Object.assign({p_id:s.id,p_nombre:s.nombre,p_zona:s.zona||"",p_telefono:s.telefono||"",p_activo:s.activo,p_cedula:s.cedula||"",p_cargo:s.cargo||"",p_provincia:s.provincia||"",p_municipio:s.municipio||"",p_recinto:s.recinto||""},over||{})}
   $("snb").onclick=function(){var f=$("fSub");f.hidden=!f.hidden;$("snew").innerHTML="";if(!f.hidden)$("snom").focus()};
@@ -749,7 +793,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var a=r.data||[];SRES={};a.forEach(function(p){SRES[p.id]=p});
     $("res").innerHTML=a.length?a.map(function(p){
       var b;if(p.mio)b='<span class="pill ok">Ya es suyo</span>';else if(p.tomado_por)b='<span class="pill no">Lo tiene '+esc(p.tomado_por)+"</span>";else b='<button class="btn" data-add="'+p.id+'">Añadir</button>';
-      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula)+vfTag(p)+"</div></div>"+b+"</div>"}).join(""):'<p class="empty">No aparece en el padrón.</p>';
+      return '<div class="row"><div class="pr">'+foto(p.id)+'<div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula)+vfTag(p)+"</div></div></div>"+b+"</div>"}).join(""):'<p class="empty">No aparece en el padrón.</p>';
+    cargarFotos($("res"));
   }
   $("q").oninput=function(){clearTimeout(sT);sT=setTimeout(doSearch,350)};
 
@@ -767,9 +812,9 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     return '<details class="dc'+(p.activo?"":" off")+'" data-cid="'+p.id+'" data-q="'+esc(String(p.nombre||"").toLowerCase())+'"><summary><div class="dn"><div class="nm">'+esc(p.nombre)+'</div>'+(info?'<div class="sub">'+esc(info)+"</div>":"")+
       (meta>0?'<div class="mbar" title="Meta: '+meta+'"><i style="width:'+Math.min(100,n/meta*100)+'%"></i></div><div class="sub">'+n+" de "+meta+" (meta)</div>":"")+
       '</div><span class="cnt">'+n+'</span></summary><div class="dcb" id="db-'+p.id+'"><p class="empty">Cargando…</p></div></details>'}
-  function miHtml(p,creado){
+  function miHtml(p,creado,pid){
     var tel=p.celular?'<a href="tel:'+esc(digits(p.celular))+'">'+esc(fmtCel(p.celular))+"</a>":'<span style="color:var(--bad)">Sin teléfono</span>';
-    return '<div class="mi"><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(cv(p.cedula)||"Sin cédula")+" · "+tel+"<br>"+esc([lugar(p),fecha(creado)].filter(Boolean).join(" · "))+vfTag(p)+"</div></div>"}
+    return '<div class="mi"><div class="pr">'+foto(pid)+'<div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(cv(p.cedula)||"Sin cédula")+" · "+tel+"<br>"+esc([lugar(p),fecha(creado)].filter(Boolean).join(" · "))+vfTag(p)+"</div></div></div></div>"}
   function renderDash(){
     var open=[].map.call(document.querySelectorAll("#dash details[open]"),function(d){return d.getAttribute("data-cid")});
     var co=Object.keys(COO).map(function(k){return COO[k]}).sort(function(a,b){return (b.activo-a.activo)||(b.n-a.n)||a.nombre.localeCompare(b.nombre)});
@@ -786,13 +831,14 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   async function loadDash(id){
     var box=$("db-"+id);if(!box)return;
     var esJ=!!JEF[id];
-    var r=await sb.from("seguidores").select("creado,padron(nombre,cedula,recinto,colegio,celular,estado)").eq("coord_id",id).order("creado",{ascending:false});
+    var r=await sb.from("seguidores").select("padron_id,creado,padron(nombre,cedula,recinto,colegio,celular,estado)").eq("coord_id",id).order("creado",{ascending:false});
     if(r.error){box.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     var a=r.data||[],js=esJ?[]:jefesDe(id);
     box.innerHTML=(esJ?"":'<div class="dact"><button class="btn" data-pdf="'+id+'">Informe PDF</button><button class="btn ghost" data-goc="'+id+'">Editar coordinador</button></div>')+
       (js.length?'<h3 class="mh">Subcoordinadores ('+js.length+")</h3>"+js.map(function(j){return dcHtml(j,true)}).join(""):"")+
       '<h3 class="mh">'+(js.length?"Militantes propios":"Militantes")+" ("+a.length+")</h3>"+
-      (a.length?a.map(function(x){return miHtml(x.padron||{},x.creado)}).join(""):'<p class="empty">Todavía no ha inscrito militantes.</p>')}
+      (a.length?a.map(function(x){return miHtml(x.padron||{},x.creado,x.padron_id)}).join(""):'<p class="empty">Todavía no ha inscrito militantes.</p>');
+    cargarFotos(box)}
   document.addEventListener("toggle",function(e){
     var d=e.target;if(!d.classList||!d.classList.contains("dc")||!d.open)return;
     loadDash(d.getAttribute("data-cid"))},true);
@@ -843,7 +889,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var ml=$("ml-"+id);if(!ml)return;
     if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     ml.innerHTML=(r.data||[]).map(function(x){var p=x.padron||{};
-      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(cv(p.cedula)||"Sin cédula")+(p.celular?" · "+esc(fmtCel(p.celular)):"")+vfTag(p)+'</div></div><button class="btn ghost" data-aq="'+x.padron_id+'" data-co="'+id+'" data-nm="'+esc(p.nombre)+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
+      return '<div class="row"><div class="pr">'+foto(x.padron_id)+'<div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(cv(p.cedula)||"Sin cédula")+(p.celular?" · "+esc(fmtCel(p.celular)):"")+vfTag(p)+'</div></div></div><button class="btn ghost" data-aq="'+x.padron_id+'" data-co="'+id+'" data-nm="'+esc(p.nombre)+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
+    cargarFotos(ml);
   }
   /* ---- zonas ---- */
   async function zonaFilas(){
@@ -925,43 +972,146 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   async function loadPadCount(){
     var r=await sb.from("padron").select("id",{count:"exact",head:true});
     $("pcount").textContent=r.error?errMsg(r.error):"Personas cargadas en el servidor: "+(r.count||0);
+    revisarFotos();
   }
   function setProg(f,msg){$("prog").hidden=false;$("prog").firstChild.style.width=Math.round(f*100)+"%";$("pmsg").textContent=msg}
-  async function readPdf(file){
-    if(typeof pdfjsLib==="undefined"){$("pmsg").textContent="No se pudo cargar el lector de PDF. Revise el internet.";return}
-    $("rep").hidden=true;TMP=null;
+  /* ---- carga masiva del padrón con fotos (versión 18) ---- */
+  var FILES=[],STOP=false,FOTOSET=null,FERR="";
+  try{var pc=localStorage.getItem("apoyo.circ");if(pc!=null)$("pcirc").value=pc}catch(e){}
+  function elegir(list){
+    FILES=[].filter.call(list||[],function(f){return /\.pdf$/i.test(f.name)}).sort(function(a,b){return (a.webkitRelativePath||a.name).localeCompare(b.webkitRelativePath||b.name)});
+    var mb=FILES.reduce(function(a,f){return a+f.size},0)/1048576;
+    $("psel").textContent=FILES.length?FILES.length+" archivo"+(FILES.length>1?"s":"")+" PDF elegido"+(FILES.length>1?"s":"")+" ("+(mb<1?"menos de 1":Math.round(mb))+" MB).":"No se encontraron archivos PDF.";
+    $("pgo").disabled=!FILES.length}
+  $("pdf").onchange=function(){$("pdir").value="";elegir(this.files)};
+  $("pdir").onchange=function(){$("pdf").value="";elegir(this.files)};
+  $("pstop").onclick=function(){STOP=true;this.disabled=true;this.textContent="Deteniendo al terminar este archivo…"};
+  async function revisarFotos(){
+    var r=await sb.storage.from("fotos").list("",{limit:1});
+    var ok=!r.error,n=$("pfnote");
+    n.hidden=ok;if(!ok)n.textContent="Para subir y ver fotos falta pegar en Supabase el archivo fotos.sql. Mientras tanto se suben solo los datos.";
+    $("pfot").disabled=!ok;if(!ok)$("pfot").checked=false;return ok}
+  async function listarFotos(){
+    var s=new Set(),off=0;
+    while(true){
+      var r=await sb.storage.from("fotos").list("",{limit:1000,offset:off,sortBy:{column:"name",order:"asc"}});
+      if(r.error)throw r.error;
+      (r.data||[]).forEach(function(o){s.add(o.name)});
+      if(!r.data||r.data.length<1000)break;off+=1000}
+    return s}
+  function espera(ms){return new Promise(function(r){setTimeout(r,ms)})}
+  async function conReintento(fn){
+    var last=null;
+    for(var k=0;k<4;k++){
+      var r;try{r=await fn()}catch(x){r={error:x}}
+      if(!r.error)return r;
+      last=r.error;if(falta(last)||/autoriz|permission|row-level|policy|denied/i.test(last.message||""))break;
+      await espera([1000,3000,8000][k]||8000)}
+    throw last}
+  function mulM(a,b){return [a[0]*b[0]+a[2]*b[1],a[1]*b[0]+a[3]*b[1],a[0]*b[2]+a[2]*b[3],a[1]*b[2]+a[3]*b[3],a[0]*b[4]+a[2]*b[5]+a[4],a[1]*b[4]+a[3]*b[5]+a[5]]}
+  /* Busca la foto de cada tarjeta (la imagen pegada a la izquierda de la cédula) y la recorta. */
+  async function fotosDePagina(pg,people){
+    var O=pdfjsLib.OPS,ol=await pg.getOperatorList(),m=[1,0,0,1,0,0],st=[],imgs=[];
+    var PAINT=[O.paintImageXObject,O.paintJpegXObject,O.paintInlineImageXObject].filter(function(x){return x!=null});
+    for(var i=0;i<ol.fnArray.length;i++){
+      var fn=ol.fnArray[i],a=ol.argsArray[i];
+      if(fn===O.save)st.push(m);
+      else if(fn===O.restore)m=st.pop()||m;
+      else if(fn===O.transform)m=mulM(m,a);
+      else if(fn===O.paintFormXObjectBegin){st.push(m);if(a&&a[0])m=mulM(m,a[0])}
+      else if(fn===O.paintFormXObjectEnd)m=st.pop()||m;
+      else if(PAINT.indexOf(fn)>-1)imgs.push({x:Math.min(m[4],m[4]+m[0]),y:Math.min(m[5],m[5]+m[3]),w:Math.abs(m[0]),h:Math.abs(m[3])})}
+    imgs=imgs.filter(function(f){return f.w>20&&f.w<150&&f.h>20&&f.h<180});
+    var hits=[];
+    people.forEach(function(q){
+      var c=imgs.filter(function(f){var dx=q.ax-(f.x+f.w);return dx>0&&dx<20&&q.ay<=f.y+f.h+3&&q.ay>=f.y+f.h-25});
+      if(c.length===1)hits.push([q,c[0]])});
+    if(!hits.length)return;
+    var vp=pg.getViewport({scale:1.6}),cv=document.createElement("canvas");
+    cv.width=Math.ceil(vp.width);cv.height=Math.ceil(vp.height);
+    await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
+    var out=document.createElement("canvas"),W=96,H=110,ox=out.getContext("2d");out.width=W;out.height=H;
+    for(var j=0;j<hits.length;j++){
+      var q=hits[j][0],f=hits[j][1],M=vp.transform,r=[M[0]*f.x+M[2]*f.y+M[4],M[1]*f.x+M[3]*f.y+M[5],M[0]*(f.x+f.w)+M[2]*(f.y+f.h)+M[4],M[1]*(f.x+f.w)+M[3]*(f.y+f.h)+M[5]];
+      ox.fillStyle="#fff";ox.fillRect(0,0,W,H);
+      ox.drawImage(cv,Math.min(r[0],r[2]),Math.min(r[1],r[3]),Math.abs(r[2]-r[0]),Math.abs(r[3]-r[1]),0,0,W,H);
+      q.foto=await new Promise(function(res){out.toBlob(res,"image/jpeg",0.78)})}
+    cv.width=cv.height=0}
+  async function leerArchivo(file,conFotos){
+    var task=pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}),doc=await task.promise,pages=[];
     try{
-      pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      var doc=await pdfjsLib.getDocument({data:await file.arrayBuffer(),isEvalSupported:false}).promise,pages=[],noText=0;
       for(var i=1;i<=doc.numPages;i++){
         var pg=await doc.getPage(i),vp=pg.getViewport({scale:1}),tc=await pg.getTextContent();
         var items=tc.items.map(function(t){return{s:t.str,x:t.transform[4],y:t.transform[5],w:t.width,h:Math.abs(t.transform[3])||t.height}});
-        if(items.length<5)noText++;pages.push(parsePage(items,vp.width));
-        if(i%3===0||i===doc.numPages){setProg(i/doc.numPages,"Leyendo hoja "+i+" de "+doc.numPages+"…");await new Promise(function(r){setTimeout(r,0)})}
+        var res=parsePage(items,vp.width);pages.push(res);
+        if(conFotos&&res.people.length){try{await fotosDePagina(pg,res.people)}catch(e){FERR=errMsg(e)}}
+        pg.cleanup();
       }
-      var g=joinPages(pages);
-      if(!g.length){$("pmsg").textContent="No se encontraron personas en este PDF."+(noText?" Parece no tener texto seleccionable.":"");return}
-      var tot=0,bad=0;
-      $("tb").innerHTML=g.map(function(x){tot+=x.people.length;if(!x.ok)bad++;return "<tr><td>"+esc(x.rec||"—")+"</td><td>"+esc(x.colegio||"—")+"</td><td>"+(x.mil==null?"—":x.mil)+"</td><td>"+x.people.length+'</td><td><span class="pill '+(x.ok?"ok":"bad")+'">'+(x.ok?"Completo":"Revisar")+"</span></td></tr>"}).join("");
-      $("repn").textContent=doc.numPages+" hojas leídas. "+tot+" personas en "+g.length+" colegios."+(bad?" En los colegios marcados «Revisar» la cantidad leída no coincide con el total del encabezado, o falta algún dato. Compare esos colegios con el PDF antes de subir.":" Todos los colegios coinciden con el total del encabezado.");
-      TMP=g;$("rep").hidden=false;$("pmsg").textContent="Lectura terminada. Todavía no se ha subido nada."
-    }catch(e){$("pmsg").textContent="No se pudo leer el PDF. "+errMsg(e)}
-  }
-  $("pdf").onchange=function(){if(this.files[0])readPdf(this.files[0])};
-  $("up").onclick=async function(){
-    if(!TMP||busy)return;busy=true;this.disabled=true;
-    var rows=[];TMP.forEach(function(g){g.people.forEach(function(q){rows.push({cedula:q.ced,nombre:q.nombre,estado:q.estado||"",celular:q.cel||q.tel||"",recinto:q.rec||"",colegio:q.colegio||""})})});
-    try{
-      /* subir_padron (proteger-padron.sql) nunca borra el teléfono, apodo ni dirección que ya están */
-      for(var i=0;i<rows.length;i+=500){
-        var r=await sb.rpc("subir_padron",{p_filas:rows.slice(i,i+500)});
-        if(r.error)throw r.error;
-        setProg(Math.min(1,(i+500)/rows.length),"Subiendo "+Math.min(i+500,rows.length)+" de "+rows.length+"…");
+    }finally{try{task.destroy()}catch(e){}}
+    return joinPages(pages)}
+  async function subirColegio(G,conFotos,T){
+    var rows=G.people.map(function(q){return {cedula:q.ced,nombre:q.nombre,estado:q.estado||"",celular:q.cel||q.tel||"",recinto:q.rec||"",colegio:q.colegio||""}});
+    for(var i=0;i<rows.length;i+=500){var part=rows.slice(i,i+500);await conReintento(function(){return sb.rpc("subir_padron",{p_filas:part})})}
+    T.per+=rows.length;
+    var conF=G.people.filter(function(q){return q.foto});G.nf=conF.length;
+    if(!conFotos||!conF.length)return;
+    var ids={},ceds=conF.map(function(q){return q.ced});
+    for(var k=0;k<ceds.length;k+=150){var cp=ceds.slice(k,k+150);
+      var r=await conReintento(function(){return sb.from("padron").select("id,cedula").in("cedula",cp)});
+      (r.data||[]).forEach(function(x){ids[x.cedula]=x.id})}
+    var cola=conF.slice();
+    async function obrero(){
+      while(cola.length){
+        var q=cola.shift(),id=ids[q.ced];if(!id)continue;
+        var nm=id+".jpg";
+        if(FOTOSET&&FOTOSET.has(nm)){T.fotYa++;continue}
+        await conReintento(function(){return sb.storage.from("fotos").upload(nm,q.foto,{upsert:true,contentType:"image/jpeg",cacheControl:"86400"})});
+        if(FOTOSET)FOTOSET.add(nm);T.fot++}}
+    await Promise.all([obrero(),obrero(),obrero(),obrero()]);
+    G.people.forEach(function(q){q.foto=null})}
+  function filaCol(G,res,clase,arch){
+    var tr=document.createElement("tr");
+    tr.innerHTML="<td>"+esc(G?G.rec||"—":arch)+"</td><td>"+esc(G?G.colegio||"—":"—")+"</td><td>"+(G&&G.mil!=null?G.mil:"—")+"</td><td>"+(G?G.people.length:"—")+"</td><td>"+(G&&G.nf!=null?G.nf:"—")+'</td><td><span class="pill '+clase+'">'+esc(res)+"</span></td>";
+    $("tb").appendChild(tr)}
+  $("pgo").onclick=async function(){
+    if(!FILES.length||busy)return;
+    if(typeof pdfjsLib==="undefined"){$("pmsg").textContent="No se pudo cargar el lector de PDF. Revise el internet y recargue.";return}
+    pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    busy=true;STOP=false;var btn=this;btn.disabled=true;$("pstop").hidden=false;$("pstop").disabled=false;$("pstop").textContent="Detener";
+    var circ=digits($("pcirc").value),force=$("pforce").checked,conF=$("pfot").checked&&!$("pfot").disabled;
+    try{localStorage.setItem("apoyo.circ",$("pcirc").value)}catch(e){}
+    var wl=null;try{if(navigator.wakeLock)wl=await navigator.wakeLock.request("screen")}catch(e){}
+    var T={col:0,per:0,fot:0,fotYa:0,otra:0,rev:[],err:""};FERR="";
+    $("tb").innerHTML="";$("rep").hidden=false;$("pres").innerHTML="";
+    if(conF){setProg(0,"Revisando las fotos que ya están en el servidor…");try{FOTOSET=await listarFotos()}catch(e){FOTOSET=null}}
+    var t0=Date.now();
+    for(var i=0;i<FILES.length&&!STOP;i++){
+      var f=FILES[i],eta="";resetIdle();
+      if(i>0){var min=Math.round((Date.now()-t0)/i*(FILES.length-i)/60000);eta=min>0?" · faltan unos "+(min>90?Math.round(min/60)+" h":min+" min"):""}
+      setProg(i/FILES.length,"Archivo "+(i+1)+" de "+FILES.length+": "+(f.webkitRelativePath||f.name)+eta);
+      var gs;
+      try{gs=await leerArchivo(f,conF)}catch(e){T.rev.push((f.webkitRelativePath||f.name)+": no se pudo leer ("+errMsg(e)+")");filaCol(null,"No se pudo leer","bad",f.name);continue}
+      if(!gs.length){T.rev.push((f.webkitRelativePath||f.name)+": sin personas");filaCol(null,"Sin personas","bad",f.name);continue}
+      for(var j=0;j<gs.length&&!T.err;j++){
+        var G=gs[j];
+        if(circ&&G.circ&&Number(G.circ)!==Number(circ)){T.otra++;filaCol(G,"Otra circ. ("+G.circ+")","no");continue}
+        if(circ&&!G.circ){T.rev.push(f.name+" · colegio "+(G.colegio||"?")+": no se leyó la circunscripción");filaCol(G,"Revisar","bad");continue}
+        if(!G.ok&&!force){T.rev.push((f.webkitRelativePath||f.name)+" · colegio "+(G.colegio||"?")+": leídos "+G.people.length+" de "+(G.mil==null?"?":G.mil));filaCol(G,"Revisar","bad");continue}
+        try{await subirColegio(G,conF,T);T.col++;filaCol(G,"Subido","ok")}
+        catch(e){T.err=(f.webkitRelativePath||f.name)+": "+(falta(e)?"falta pegar en Supabase proteger-padron.sql":errMsg(e));filaCol(G,"Error","bad")}
       }
-      toast("Padrón subido: "+rows.length+" personas");$("rep").hidden=true;$("prog").hidden=true;$("pmsg").textContent="";$("pdf").value="";TMP=null;loadPadCount();
-    }catch(e){$("pmsg").textContent=falta(e)?"No se subió nada: falta pegar en Supabase el archivo proteger-padron.sql.":"Falló la subida: "+errMsg(e)+". Puede intentarlo de nuevo; no se duplica nada."}
-    busy=false;this.disabled=false;
-  };
+      if(T.err)break;
+    }
+    try{if(wl)wl.release()}catch(e){}
+    $("prog").hidden=true;
+    var fin=T.err?"Se detuvo por un error.":STOP?"Detenido.":"Terminado.";
+    $("pmsg").textContent="";
+    $("pres").innerHTML='<div class="note'+(T.err?" bad":T.rev.length?"":" ok")+'"><b>'+fin+"</b><br>Colegios subidos: "+T.col+" · personas: "+T.per+
+      (conF?"<br>Fotos nuevas: "+T.fot+(T.fotYa?" · ya estaban: "+T.fotYa:"")+(FERR?"<br>⚠ Algunas fotos no se pudieron sacar del PDF: "+esc(FERR):""):"")+
+      (T.otra?"<br>Saltados por ser de otra circunscripción: "+T.otra:"")+
+      (T.err?"<br>Error: "+esc(T.err)+"<br>Vuelva a elegir los mismos archivos y toque «Leer y subir»: lo ya subido no se duplica.":"")+
+      (T.rev.length?"<br><br><b>Para revisar ("+T.rev.length+"):</b> no se subieron.<br>"+T.rev.map(esc).join("<br>"):"")+"</div>";
+    busy=false;btn.disabled=false;$("pstop").hidden=true;loadPadCount()};
   $("pdel").onclick=async function(){
     var t=prompt("Esto borra del padrón a las personas que NO son militantes.\nLos militantes inscritos y sus datos se conservan.\n\nPara confirmar, escriba la palabra BORRAR:");
     if(t==null)return;
@@ -1036,6 +1186,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       if(rq.error)toast(errMsg(rq.error));else{toast("Quitado de la lista");loadSubs()}return}
     if(g("data-aq")){var r3=await sb.from("seguidores").delete().eq("padron_id",+g("data-aq"));if(r3.error)toast(errMsg(r3.error));else{toast("Quitado de la lista");loadRes()}return}
     if(g("data-act")){setActivo(g("data-act"),g("data-to")==="1");return}
+    if(t.classList&&t.classList.contains("fo")&&g("data-ok")){verFoto(t);return}
     if(g("data-avx")){$("avis").hidden=true;return}
     if(g("data-zdel")){borrarZona(+g("data-zdel"));return}
     if(g("data-add")){var sp=SRES[g("data-add")];t.disabled=true;var r=await sb.rpc("anadir_seguidor",{p_id:+g("data-add")});
