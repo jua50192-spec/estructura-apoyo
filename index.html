@@ -381,7 +381,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 26-oct-2026 (24)</p>
+  <p class="ver" id="ver">Versión 26-oct-2026 (25)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -406,6 +406,7 @@ function parsePage(items,W){
   // 2) encabezado: recinto, colegio, totales
   hdr.forEach(function(r){var m=/REC\.?:?\s*(\d+)\s+(.+)/.exec(r.s);if(m)res.rec=m[1]+" "+m[2].trim()});
   if(!res.rec){hdr.forEach(function(r,i){if(/^REC\.?:?$/.test(r.s)){var n=hdr.filter(function(q){return Math.abs(q.y-r.y)<=2&&q.x>r.x}).sort(function(a,b){return a.x-b.x})[0];if(n)res.rec=n.s}})}
+  res.rec=String(res.rec||"").replace(/\s*-\s*\(\d+\)\s*$/,"").trim();   /* quita el « - (00015)» repetido al final */
   hdr.forEach(function(r){var m=/CIRC\w*\.?:?\s*(\d+)/i.exec(r.s);if(m&&!res.circ)res.circ=m[1]});
   if(!res.circ){hdr.forEach(function(r){if(!res.circ&&/^CIRC\w*\.?:?$/i.test(r.s)){var n=hdr.filter(function(q){return Math.abs(q.y-r.y)<=2&&q.x>r.x}).sort(function(a,b){return a.x-b.x})[0];if(n&&/^\d+$/.test(n.s))res.circ=n.s}})}
   function below(label,rx){
@@ -422,9 +423,10 @@ function parsePage(items,W){
     var ca=anchors.filter(inCol).sort(function(a,b){return b.y-a.y});
     ca.forEach(function(a,k){
       var lo=k+1<ca.length?ca[k+1].y-2:-1e9;
-      var card=runs.filter(function(r){return inCol(r)&&r.y<=a.y+2&&r.y>lo});
-      var line0=card.filter(function(r){return Math.abs(r.y-a.y)<=3});
-      var est="";line0.forEach(function(r){if(/RATIFICADO/i.test(r.s))est="Ratificado";else if(/CONFIRMAR/i.test(r.s))est="A confirmar"});
+      var card=runs.filter(function(r){return inCol(r)&&r.y<=a.y+4&&r.y>lo});
+      var line0=card.filter(function(r){return Math.abs(r.y-a.y)<=4});
+      /* Estado: «RATIFICADO», «A CONFIRMAR» (a veces cortado «A CONFIRMA»), «CONFIRMADO» o «NUEVA INSCRIPCION» */
+      var est="";line0.forEach(function(r){if(/RATIFICADO/i.test(r.s))est="Ratificado";else if(/\bA\s*CONFIRMA/i.test(r.s))est="A confirmar";else if(/CONFIRMADO/i.test(r.s))est="Confirmado";else if(/INSCRIPCI/i.test(r.s)&&!est)est="Nueva inscripción"});
       var ord=line0.filter(function(r){return /^\d{1,6}$/.test(r.s)}).sort(function(p,q){return q.x-p.x})[0];
       var rest=card.filter(function(r){return r.y<a.y-3&&r.x>=a.x-6}).sort(function(p,q){return q.y-p.y});
       var nameLine=rest.length?rest.filter(function(r){return Math.abs(r.y-rest[0].y)<=3&&r.x>=a.x-6}).sort(function(p,q){return p.x-q.x}):[];
@@ -454,7 +456,8 @@ function joinPages(pages){
   return order.map(function(k){var G=g[k];delete G.seen;
     G.rat2=G.people.filter(function(q){return q.estado==="Ratificado"}).length;
     G.conf2=G.people.filter(function(q){return q.estado==="A confirmar"}).length;
-    G.ok=G.mil!=null&&G.mil===G.people.length&&G.people.every(function(q){return q.nombre&&q.estado});
+    G.ok=G.mil!=null&&G.mil===G.people.length&&G.people.every(function(q){return q.nombre});
+    G.sinEst=G.people.filter(function(q){return !q.estado}).length;
     return G});
 }
 if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joinPages};
@@ -1150,7 +1153,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
           var sNom=G.people.filter(function(q){return !q.nombre}).length,sEst=G.people.filter(function(q){return !q.estado}).length;
           T.rev.push((f.webkitRelativePath||f.name)+" · colegio "+(G.colegio||"?")+": leídos "+G.people.length+" de "+(G.mil==null?"?":G.mil)+(sNom?" · "+sNom+" sin nombre":"")+(sEst?" · "+sEst+" sin estado":""));
           filaCol(G,"Revisar","bad");continue}
-        try{await subirColegio(G,conF,T,docA);T.col++;filaCol(G,"Subido","ok")}
+        try{await subirColegio(G,conF,T,docA);T.col++;T.sinEst=(T.sinEst||0)+(G.sinEst||0);filaCol(G,"Subido","ok")}
         catch(e){T.err=(f.webkitRelativePath||f.name)+": "+(falta(e)?"falta pegar en Supabase proteger-padron.sql":errMsg(e));filaCol(G,"Error","bad")}
       }
       }finally{try{got.r.task.destroy()}catch(e){}}
@@ -1164,6 +1167,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     $("pres").innerHTML='<div class="note'+(T.err?" bad":T.rev.length?"":" ok")+'"><b>'+fin+"</b><br>Colegios subidos: "+T.col+" · personas: "+T.per+
       (conF?"<br>Fotos nuevas: "+T.fot+(T.fotYa?" · ya estaban: "+T.fotYa:"")+(FERR?"<br>⚠ Algunas fotos no se pudieron sacar del PDF: "+esc(FERR):""):"")+
       (T.otra?"<br>Saltados por ser de otra circunscripción: "+T.otra:"")+
+      (T.sinEst?"<br>⚠ Personas subidas sin estado (no se leyó Ratificado / A confirmar / Confirmado): "+T.sinEst:"")+
       (T.err?"<br>Error: "+esc(T.err)+"<br>Vuelva a elegir los mismos archivos y toque «Leer y subir»: lo ya subido no se duplica.":"")+
       (T.rev.length?"<br><br><b>Para revisar ("+T.rev.length+"):</b> no se subieron.<br>"+T.rev.map(esc).join("<br>"):"")+"</div>";
     busy=false;btn.disabled=false;$("pstop").hidden=true;loadPadCount()};
