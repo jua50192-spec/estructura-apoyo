@@ -334,7 +334,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 25-oct-2026 (15)</p>
+  <p class="ver" id="ver">Versión 26-oct-2026 (16)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -601,11 +601,26 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(r.error){$("mine").innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     var a=r.data||[];MINE=a;$("cmine").textContent=a.length;if(!$("cSub").hidden)drawTot();
     if(a.length){var d=new Date(a[0].creado);$("cdate").textContent=d.toLocaleDateString("es-DO",{day:"numeric",month:"short"})}else $("cdate").textContent="—";
+    var puedeSub=ME.rol==="coordinador"&&!!ME.puede_comites;
     $("mine").innerHTML=a.length?a.map(function(p){
       var tel=p.celular?'<a href="tel:'+esc(p.celular)+'">'+esc(fmtCel(p.celular))+"</a>":'<span style="color:var(--bad)">Sin teléfono</span>';
-      return '<div class="cw"><div class="row"><div><div class="nm">'+esc(p.nombre)+(p.apodo?' <span class="sub">('+esc(p.apodo)+")</span>":"")+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:""].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula||"Sin cédula")+" · "+tel+'</div></div><div class="acts"><button class="btn ghost" data-ed="'+p.id+'">Editar</button><button class="btn ghost" data-del="'+p.id+'">Quitar</button></div></div><div class="medit" id="me-'+p.id+'" hidden></div></div>'}).join(""):'<p class="empty">Todavía no ha añadido militantes.</p>';
+      return '<div class="cw"><div class="row"><div><div class="nm">'+esc(p.nombre)+(p.apodo?' <span class="sub">('+esc(p.apodo)+")</span>":"")+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:""].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula||"Sin cédula")+" · "+tel+'</div></div><div class="acts"><button class="btn ghost" data-ed="'+p.id+'">Editar</button><button class="btn ghost" data-del="'+p.id+'">Quitar</button>'+(puedeSub?'<button class="btn ghost" data-hsub="'+p.id+'">Hacer subcoordinador</button>':"")+'</div></div><div class="medit" id="me-'+p.id+'" hidden></div></div>'}).join(""):'<p class="empty">Todavía no ha añadido militantes.</p>';
   }
   function mineById(id){return MINE.filter(function(p){return String(p.id)===String(id)})[0]}
+  /* Subir un militante a subcoordinador: llena el formulario de siempre con sus datos.
+     El militante sigue en la lista del coordinador (sigue contando). */
+  function hacerSub(id){
+    var p=mineById(id);if(!p||$("cSub").hidden)return;
+    var cd=digits(p.cedula);
+    if(cd.length===11&&SUBS.some(function(s){return digits(s.cedula)===cd})){toast(p.nombre+" ya es subcoordinador");return}
+    $("snew").innerHTML="";$("fSub").reset();$("fSub").hidden=false;
+    $("snom").value=String(p.nombre||"").trim().replace(/\s+/g," ");
+    $("sced").value=cd.length===11?fmtC(cd):"";
+    $("stel").value=digits(p.celular).length===10?fmtT(p.celular):"";
+    $("cSub").scrollIntoView({behavior:"smooth",block:"start"});
+    var falt=!$("sced").value?$("sced"):!$("stel").value?$("stel"):null;
+    if(falt){setTimeout(function(){falt.focus()},400);toast("Escriba "+(falt.id==="sced"?"la cédula":"el teléfono")+" y toque «Crear subcoordinador»")}
+    else toast("Revise los datos y toque «Crear subcoordinador»")}
   function openEdit(id){
     var box=$("me-"+id),p=mineById(id);if(!box||!p)return;
     if(!box.hidden){box.hidden=true;return}
@@ -895,6 +910,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(g("data-goc")){var gid=g("data-goc");OPEN=gid;tab("coo");
       setTimeout(function(){var el=$("cd-"+gid);if(el)el.scrollIntoView({behavior:"smooth",block:"start"})},900);return}
     if(g("data-ed")){openEdit(g("data-ed"));return}
+    if(g("data-hsub")){hacerSub(g("data-hsub"));return}
     if(g("data-edx")){var bx=$("me-"+g("data-edx"));if(bx)bx.hidden=true;return}
     var nm=g("data-nm");
     if((g("data-sq")||g("data-aq"))&&!confirm("¿Quitar a "+(nm||"esta persona")+" de la lista?\n\nPodrá volver a añadirla después si hace falta."))return;
