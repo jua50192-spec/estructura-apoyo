@@ -378,7 +378,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 26-oct-2026 (20)</p>
+  <p class="ver" id="ver">Versión 26-oct-2026 (21)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -471,9 +471,10 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   function zFmt(v){var s=String(v||"").toUpperCase().replace(/^ZONA/,"").replace(/[^A-Z0-9]/g,""),m=/^([A-Z])(\d{0,2})/.exec(s);return m?m[1]+(m[2]?"-"+m[2]:""):""}
   function zCod(v){var s=zFmt(v);return /^[A-Z]-\d{1,2}$/.test(s)?s:""}
   var ZERR="Escriba la zona así: una letra y el número, por ejemplo B-2";
-  function zMsg(e,cod){var m=(e&&e.message)||"";return /duplicate|unique/i.test(m)?"Ya existe la zona "+cod:/integer|numeric/i.test(m)?"Para usar letras en la zona falta pegar en Supabase el archivo zonas-codigo.sql":errMsg(e)}
+  function zMsg(e,cod){var m=(e&&e.message)||"";return /duplicate|unique/i.test(m)?"Ya existe la zona "+cod:/integer|numeric/i.test(m)?"Para usar letras en la zona falta pegar en Supabase el archivo zonas-codigo.sql":/otra zona/i.test(m)?"Para compartir recintos entre zonas falta pegar en Supabase el archivo zonas-compartidas.sql":errMsg(e)}
   function zLabel(id){var z=zonaPor(id);return z?"Zona "+z.numero+(z.nombre?" – "+z.nombre:""):""}
-  function zCorta(rec){var z=zonaPor(ZREC[rec]);return z?"Zona "+z.numero:""}
+  function zDe(rec){return (ZREC[rec]||[]).map(zonaPor).filter(Boolean).sort(function(a,b){return String(a.numero).localeCompare(String(b.numero),"es",{numeric:true})})}
+  function zCorta(rec){var zs=zDe(rec);return zs.length?"Zona "+zs.map(function(z){return z.numero}).join("/"):""}
   function porConf(p){return /confirmar/i.test((p&&p.estado)||"")}
   function vfTag(p){return porConf(p)?'<br><span class="vf">⚠ A confirmar · VERIFICATE</span>':""}
   function lugar(p){return [p.recinto,p.colegio?"Colegio "+p.colegio:"",zCorta(p.recinto)].filter(Boolean).join(" · ")}
@@ -482,7 +483,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     try{
       var a=await sb.from("zonas").select("*").order("numero"),b=await sb.from("zona_recintos").select("*");
       if(a.error||b.error)throw a.error||b.error;
-      ZONAS=(a.data||[]).sort(function(x,y){return String(x.numero).localeCompare(String(y.numero),"es",{numeric:true,sensitivity:"base"})});ZREC={};(b.data||[]).forEach(function(x){ZREC[x.recinto]=x.zona_id});ZOK=true}
+      ZONAS=(a.data||[]).sort(function(x,y){return String(x.numero).localeCompare(String(y.numero),"es",{numeric:true,sensitivity:"base"})});ZREC={};(b.data||[]).forEach(function(x){(ZREC[x.recinto]=ZREC[x.recinto]||[]).push(x.zona_id)});ZOK=true}
     catch(e){ZONAS=[];ZREC={};ZOK=false}}
   var FURL={},FOK=null,PIX="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
   function foto(id){return FOK===false||!id?"":'<img class="fo" data-fid="'+esc(id)+'" src="'+PIX+'" alt="">'}
@@ -903,7 +904,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var cos=Object.keys(COO).map(function(k){return COO[k]});
     return {m:m,rows:ZONAS.map(function(z){
       var cs=cos.filter(function(c){return c.zona_id===z.id});
-      return {z:z,coords:cs,act:cs.filter(function(c){return c.activo}).length,mil:m[z.id]||0,nrec:Object.keys(ZREC).filter(function(k){return ZREC[k]===z.id}).length}})}}
+      return {z:z,coords:cs,act:cs.filter(function(c){return c.activo}).length,mil:m[z.id]||0,nrec:Object.keys(ZREC).filter(function(k){return ZREC[k].indexOf(z.id)>-1}).length}})}}
   async function drawZres(){
     var box=$("zres");
     if(!ZOK){box.innerHTML='<p class="empty">Falta pegar en Supabase el archivo zonas.sql.</p>';return}
@@ -911,16 +912,21 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var d=await zonaFilas();
     box.innerHTML=d.rows.map(function(x){
       return '<div class="row"><div><div class="nm">'+esc(zLabel(x.z.id))+'</div><div class="sub">'+x.act+" coordinador"+(x.act===1?"":"es")+" activo"+(x.act===1?"":"s")+" · "+x.nrec+" recinto"+(x.nrec===1?"":"s")+"</div>"+(x.act?"":'<span class="vf">⚠ Sin coordinador activo</span>')+'</div><span class="pill ok">'+x.mil+"</span></div>"}).join("")+
-      (d.m.x?'<div class="row"><div><div class="nm">Sin zona</div><div class="sub">Militantes de recintos que no están en ninguna zona</div></div><span class="pill no">'+d.m.x+"</span></div>":"")}
+      (d.m.x?'<div class="row"><div><div class="nm">Sin zona</div><div class="sub">Militantes de coordinadores que no tienen zona</div></div><span class="pill no">'+d.m.x+"</span></div>":"")}
+  var ZROWS={};
   function zonaBody(x){
-    var z=x.z,mine=RECS.filter(function(r){return ZREC[r.recinto]===z.id}),libres=RECS.filter(function(r){return !ZREC[r.recinto]});
-    var chk=function(r,on){return '<label class="zr"><input type="checkbox" name="rec" value="'+esc(r.recinto)+'"'+(on?" checked":"")+"><span>"+esc(r.recinto)+' <span class="sub">· '+r.personas+" personas</span></span></label>"};
+    var z=x.z,suyo=function(r){return (ZREC[r.recinto]||[]).indexOf(z.id)>-1};
+    var mine=RECS.filter(suyo),otros=RECS.filter(function(r){return !suyo(r)});
+    var chk=function(r,on){
+      var ot=zDe(r.recinto).filter(function(o){return o.id!==z.id}).map(function(o){return o.numero});
+      return '<label class="zr" data-zq="'+esc(String(r.recinto).toLowerCase())+'"><input type="checkbox" name="rec" value="'+esc(r.recinto)+'"'+(on?" checked":"")+"><span>"+esc(r.recinto)+' <span class="sub">· '+r.personas+" personas</span>"+
+        (ot.length?' <span class="vf" style="background:var(--tile);color:var(--mute)">también en '+esc(ot.join(", "))+"</span>":(on?"":' <span class="vf">sin zona</span>'))+"</span></label>"};
     return '<form class="fld" data-zedit="'+z.id+'" autocomplete="off" style="margin-top:8px"><div class="cf"><div><label>Zona</label><input name="num" maxlength="4" autocapitalize="characters" autocomplete="off" value="'+esc(z.numero)+'" required></div><div><label>Nombre</label><input name="nom" maxlength="60" value="'+esc(z.nombre)+'"></div></div>'+
       '<h3 class="mh">Recintos de esta zona ('+mine.length+")</h3>"+(mine.length?'<p class="hint">Desmarque el que no sea de esta zona.</p>'+mine.map(function(r){return chk(r,true)}).join(""):'<p class="empty">Ninguno todavía.</p>')+
-      '<h3 class="mh">Recintos sin zona ('+libres.length+")</h3>"+(libres.length?'<p class="hint">Marque los que son de esta zona.</p>'+libres.map(function(r){return chk(r,false)}).join(""):'<p class="empty">'+(RECS.length?"Todos los recintos ya tienen zona.":"Primero cargue el padrón.")+"</p>")+
-      '<p class="hint">Los recintos de otras zonas no salen aquí. Para pasar uno a esta zona, desmárquelo primero en la otra.</p>'+
+      '<h3 class="mh">Otros recintos ('+otros.length+")</h3>"+(otros.length?'<p class="hint">Marque los que trabaja esta zona. Un recinto puede estar en varias zonas.</p><input type="search" data-zf="1" placeholder="Buscar recinto…" autocomplete="off" style="margin-bottom:4px">'+otros.map(function(r){return chk(r,false)}).join(""):'<p class="empty">'+(RECS.length?"No hay más recintos.":"Primero cargue el padrón.")+"</p>")+
       '<p class="sub">'+(x.coords.length?"Coordinadores: "+esc(x.coords.map(function(c){return c.nombre+(c.activo?"":" (desactivado)")}).join(", ")):"Sin coordinadores. Asígnelos en Coordinadores → Ver / editar.")+"</p>"+
       '<button class="btn wide" type="submit">Guardar zona</button></form><button class="btn ghost wide" style="margin-top:8px" data-zdel="'+z.id+'">Borrar esta zona</button>'}
+  function abrirZona(d){var id=+d.getAttribute("data-zid"),b=d.querySelector(".dcb");if(b&&!b.getAttribute("data-on")&&ZROWS[id]){b.innerHTML=zonaBody(ZROWS[id]);b.setAttribute("data-on","1")}}
   async function loadZonTab(){
     var st=$("zstat"),zl=$("zlist");
     await loadZonas();
@@ -929,14 +935,19 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(!Object.keys(COO).length)await loadRes();
     var rr=await sb.rpc("recintos_padron");RECS=rr.error?[]:rr.data||[];
     var d=await zonaFilas();
-    var sinZ=RECS.filter(function(r){return !ZREC[r.recinto]}).length,sinC=d.rows.filter(function(x){return !x.act}).length,sinR=d.rows.filter(function(x){return !x.nrec}).length;
+    var sinZ=RECS.filter(function(r){return !(ZREC[r.recinto]||[]).length}).length,comp=RECS.filter(function(r){return (ZREC[r.recinto]||[]).length>1}).length,sinC=d.rows.filter(function(x){return !x.act}).length,sinR=d.rows.filter(function(x){return !x.nrec}).length;
     st.innerHTML='<div class="note'+(sinZ||sinC||sinR||!ZONAS.length?"":" ok")+'">'+ZONAS.length+" zona"+(ZONAS.length===1?"":"s")+" · "+RECS.length+" recintos en el padrón"+
-      (sinZ?"<br>⚠ "+sinZ+" recinto"+(sinZ>1?"s":"")+" sin zona":"")+(sinR?"<br>⚠ "+sinR+" zona"+(sinR>1?"s":"")+" sin recintos (sus coordinadores no encuentran a nadie por nombre)":"")+
+      (comp?"<br>"+comp+" recinto"+(comp>1?"s":"")+" compartido"+(comp>1?"s":"")+" entre zonas":"")+(sinZ?"<br>⚠ "+sinZ+" recinto"+(sinZ>1?"s":"")+" sin zona":"")+(sinR?"<br>⚠ "+sinR+" zona"+(sinR>1?"s":"")+" sin recintos (sus coordinadores no encuentran a nadie por nombre)":"")+
       (sinC?"<br>⚠ "+sinC+" zona"+(sinC>1?"s":"")+" sin coordinador activo":"")+(ZONAS.length&&!sinZ&&!sinC&&!sinR?"<br>Todo asignado.":"")+"</div>";
+    ZROWS={};d.rows.forEach(function(x){ZROWS[x.z.id]=x});
     zl.innerHTML=d.rows.map(function(x){var z=x.z;
-      return '<details class="dc" data-zid="'+z.id+'"'+(ZOPEN===z.id?" open":"")+'><summary><div class="dn"><div class="nm">'+esc(zLabel(z.id))+'</div><div class="sub">'+x.nrec+" recintos · "+x.act+" coord. activos · "+x.mil+" militantes</div>"+(x.nrec?"":'<span class="vf">⚠ Sin recintos</span> ')+(x.act?"":'<span class="vf">⚠ Sin coordinador</span>')+'</div><span class="cnt">'+z.numero+'</span></summary><div class="dcb">'+zonaBody(x)+"</div></details>"}).join("")||'<p class="empty">Todavía no hay zonas.</p>'}
+      return '<details class="dc" data-zid="'+z.id+'"'+(ZOPEN===z.id?" open":"")+'><summary><div class="dn"><div class="nm">'+esc(zLabel(z.id))+'</div><div class="sub">'+x.nrec+" recintos · "+x.act+" coord. activos · "+x.mil+" militantes</div>"+(x.nrec?"":'<span class="vf">⚠ Sin recintos</span> ')+(x.act?"":'<span class="vf">⚠ Sin coordinador</span>')+'</div><span class="cnt">'+z.numero+'</span></summary><div class="dcb"></div></details>'}).join("")||'<p class="empty">Todavía no hay zonas.</p>';
+    zl.querySelectorAll("details[open]").forEach(abrirZona)}
   document.addEventListener("toggle",function(e){var d=e.target;if(!d.getAttribute||!d.getAttribute("data-zid"))return;
-    var id=+d.getAttribute("data-zid");if(d.open)ZOPEN=id;else if(ZOPEN===id)ZOPEN=null},true);
+    var id=+d.getAttribute("data-zid");if(d.open){ZOPEN=id;abrirZona(d)}else if(ZOPEN===id)ZOPEN=null},true);
+  document.addEventListener("input",function(e){var f=e.target;if(!f.getAttribute||!f.getAttribute("data-zf"))return;
+    var q=f.value.trim().toLowerCase(),form=f.closest("form");
+    form.querySelectorAll("label.zr").forEach(function(l){var inp=l.querySelector("input");l.hidden=!!q&&!inp.checked&&l.getAttribute("data-zq").indexOf(q)<0})});
   $("fZon").onsubmit=async function(e){
     e.preventDefault();var num=zCod($("znum").value);if(!num){toast(ZERR);return}
     $("zgo").disabled=true;
@@ -1229,7 +1240,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       try{
         var ru=await sb.from("zonas").update({numero:num,nombre:f.elements.nom.value.trim()}).eq("id",zid);
         if(ru.error)throw new Error(zMsg(ru.error,num));
-        var rg=await sb.rpc("guardar_recintos_zona",{p_zona:zid,p_recintos:recs});if(rg.error)throw rg.error;
+        var rg=await sb.rpc("guardar_recintos_zona",{p_zona:zid,p_recintos:recs});if(rg.error)throw new Error(zMsg(rg.error,num));
         var co=Object.keys(COO).map(function(k){return COO[k]}).filter(function(c){return c.zona_id===zid});
         await loadZonas();
         for(var i=0;i<co.length;i++)await sb.from("perfiles").update({zona:zLabel(zid)}).eq("id",co[i].id);
