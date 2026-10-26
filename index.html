@@ -42,8 +42,8 @@ h2{font-family:var(--disp);font-size:22px;margin:0 0 10px}
 .note{border-radius:8px;padding:10px 12px;font-size:14px;background:var(--warnbg);color:var(--warn)}
 .note.bad{background:var(--badbg);color:var(--bad)}
 .note.ok{background:var(--okbg);color:var(--ok)}
-.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--tile);padding:4px;border-radius:10px}
-.seg button{border:0;background:transparent;color:var(--mute);font:600 14px var(--body);padding:10px 2px;border-radius:7px;cursor:pointer}
+.seg{display:flex;flex-wrap:wrap;gap:4px;background:var(--tile);padding:4px;border-radius:10px}
+.seg button{flex:1 1 auto;border:0;background:transparent;color:var(--mute);font:600 14px var(--body);padding:10px 8px;border-radius:7px;cursor:pointer;white-space:nowrap}
 .seg button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
 label{display:block;font-size:14px;color:var(--mute);margin-bottom:4px}
 input{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
@@ -97,6 +97,12 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .chk input{width:22px;height:22px;flex:none;margin:0}
 .hint{font-size:13px;color:var(--mute);margin:0}
 .medit{background:var(--tile);border-radius:8px;padding:12px;margin:0 0 10px}
+select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+.vf{display:inline-block;margin-top:3px;font-size:12px;font-weight:600;border-radius:6px;padding:2px 7px;background:var(--warnbg);color:var(--warn)}
+.zr{display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.zr:first-child{border-top:0}
+.zr input{width:22px;height:22px;flex:none;margin:0}
+.zr span{min-width:0;overflow-wrap:anywhere}
 /* ---- tablero de coordinadores ---- */
 .dtop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:16px 0 4px}
 .dc{border:1px solid var(--line);border-radius:10px;margin:0 0 8px;background:var(--card);overflow:hidden}
@@ -203,8 +209,10 @@ a.btn{display:block;text-align:center;text-decoration:none}
       </div>
       <div>
         <h2>Buscar en el padrón</h2>
+        <p class="hint" id="czona" hidden style="margin:-4px 0 8px"></p>
         <label for="q">Nombre, apellido o cédula</label>
         <input id="q" type="search" placeholder="Ej. Antonio" autocomplete="off">
+        <div id="avis" class="note" hidden style="margin-top:8px"></div>
         <div id="res" style="margin-top:8px"></div>
         <button id="mnb" class="btn ghost wide" style="margin-top:8px">¿No está en el padrón? Añadir a mano</button>
         <form id="fMan" class="fld" hidden autocomplete="off" style="margin-top:8px">
@@ -248,6 +256,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
       <div class="seg" role="group" aria-label="Secciones">
         <button data-tab="res" aria-pressed="true">Resumen</button>
         <button data-tab="coo" aria-pressed="false">Coordinadores</button>
+        <button data-tab="zon" aria-pressed="false">Zonas</button>
         <button data-tab="pad" aria-pressed="false">Padrón</button>
         <button data-tab="aju" aria-pressed="false">Ajustes</button>
       </div>
@@ -266,6 +275,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
           <div id="dash" style="margin-top:8px"></div>
           <button id="axl" class="btn wide" style="margin:4px 0 12px">Informe completo en PDF</button>
         </details>
+        <details class="fold" id="fZres"><summary>Por zona</summary><div id="zres"><p class="empty">Cargando…</p></div></details>
         <details class="fold"><summary>Últimos registros</summary><div id="last"></div></details>
         <details class="fold"><summary>Historial de cambios</summary>
           <p class="hint" style="margin:0 0 4px">Quién añadió o quitó a cada militante (últimos 50).</p>
@@ -280,7 +290,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
           <div><label for="ced">Cédula</label><input id="ced" inputmode="numeric" placeholder="000-0000000-0" maxlength="13" required></div>
           <div class="cf">
             <div><label for="ctel">Teléfono</label><input id="ctel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12" required></div>
-            <div><label for="czon">Zona (opcional)</label><input id="czon"></div>
+            <div><label for="czid">Zona</label><select id="czid"></select></div>
           </div>
           <label class="chk"><input type="checkbox" id="cperm"> Puede crear subcoordinadores</label>
           <p class="hint">Para entrar usará: <b>usuario</b> = su nombre completo · <b>clave</b> = su cédula sin guiones.</p>
@@ -289,6 +299,20 @@ a.btn{display:block;text-align:center;text-decoration:none}
         <div id="cnew" class="fld" style="margin-top:10px"></div>
         <h2 style="margin-top:16px">Coordinadores</h2>
         <div id="clist"></div>
+      </div>
+
+      <div id="tZon" hidden>
+        <h2>Zonas</h2>
+        <p class="hint" style="margin:0 0 10px">Cree las zonas y marque los recintos de cada una. Cada coordinador busca solo en los recintos de su zona (con la cédula completa encuentra en todas). Si un coordinador no tiene zona, ve todo el padrón.</p>
+        <div id="zstat"></div>
+        <form id="fZon" class="fld" autocomplete="off" style="margin-top:12px">
+          <div class="cf">
+            <div><label for="znum">Número de zona</label><input id="znum" type="number" inputmode="numeric" min="1" max="999" required></div>
+            <div><label for="znom">Nombre (barrio o sector)</label><input id="znom" maxlength="60"></div>
+          </div>
+          <button class="btn wide" id="zgo" type="submit">Crear zona</button>
+        </form>
+        <div id="zlist" style="margin-top:12px"></div>
       </div>
 
       <div id="tPad" hidden>
@@ -334,7 +358,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 26-oct-2026 (16)</p>
+  <p class="ver" id="ver">Versión 26-oct-2026 (17)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -417,6 +441,25 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   var CFG=window.APOYO_CONFIG||{};
   var sb=null,ME=null,CONF={candidato:"",foto:"",logo:""},DOM="@estructura.app",IDLE=30*60*1000,idleT=null;
   var NEWFOTO=null,NEWLOGO=null,TMP=null,busy=false,MINE=[];
+  /* ---- zonas y aviso VERIFICATE (versión 17) ---- */
+  var ZONAS=[],ZREC={},ZOK=false,MIZONA=null,RECS=[],SRES={},ZOPEN=null;
+  var VFTXT="Debe ser confirmado en VERIFICATE para poder votar en la interna.";
+  function zonaPor(id){id=Number(id);return ZONAS.filter(function(z){return z.id===id})[0]}
+  function zLabel(id){var z=zonaPor(id);return z?"Zona "+z.numero+(z.nombre?" – "+z.nombre:""):""}
+  function zCorta(rec){var z=zonaPor(ZREC[rec]);return z?"Zona "+z.numero:""}
+  function porConf(p){return /confirmar/i.test((p&&p.estado)||"")}
+  function vfTag(p){return porConf(p)?'<br><span class="vf">⚠ A confirmar · VERIFICATE</span>':""}
+  function lugar(p){return [p.recinto,p.colegio?"Colegio "+p.colegio:"",zCorta(p.recinto)].filter(Boolean).join(" · ")}
+  function zonaOpts(sel){sel=Number(sel)||null;return '<option value="">'+(ZONAS.length?"— Sin zona —":"Sin zonas todavía (créelas en la pestaña Zonas)")+"</option>"+ZONAS.map(function(z){return '<option value="'+z.id+'"'+(z.id===sel?" selected":"")+">"+esc(zLabel(z.id))+"</option>"}).join("")}
+  async function loadZonas(){
+    try{
+      var a=await sb.from("zonas").select("*").order("numero"),b=await sb.from("zona_recintos").select("*");
+      if(a.error||b.error)throw a.error||b.error;
+      ZONAS=a.data||[];ZREC={};(b.data||[]).forEach(function(x){ZREC[x.recinto]=x.zona_id});ZOK=true}
+    catch(e){ZONAS=[];ZREC={};ZOK=false}}
+  function showAviso(nm){var a=$("avis");
+    a.innerHTML="<b>⚠ "+esc(nm)+" está «A confirmar».</b><br>"+VFTXT+'<br><button class="btn ghost" style="margin-top:8px" data-avx="1">Entendido</button>';
+    a.hidden=false;a.scrollIntoView({behavior:"smooth",block:"center"})}
 
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
   function toast(t){var e=$("toast");e.textContent=t;e.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(function(){e.hidden=true},2800)}
@@ -458,20 +501,22 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
 
   /* ---------- Informe PDF ----------
      Cada grupo: {tipo, padre, nombre, cedula, telefono, recinto, colegio, fecha, mil:[{nombre,cedula,celular,recinto,colegio,creado}]} */
-  function mRow(p,creado){return {nombre:p.nombre||"",cedula:cv(p.cedula),celular:p.celular||"",recinto:p.recinto||"",colegio:p.colegio||"",creado:creado}}
+  function mRow(p,creado){return {nombre:p.nombre||"",cedula:cv(p.cedula),celular:p.celular||"",recinto:p.recinto||"",colegio:p.colegio||"",estado:p.estado||"",creado:creado}}
   function boxHtml(g){
     var f=function(l,v){return "<div><span>"+l+"</span><b>"+esc(v||"—")+"</b></div>"};
     return '<div class="rbox'+(g.tipo==="Subcoordinador"?" sub":"")+'"><div class="rtag">'+esc(g.tipo)+(g.padre?" · equipo de "+esc(g.padre):"")+'</div><div class="rname">'+esc(g.nombre)+'</div><div class="rgrid">'+
-      f("Cédula",g.cedula)+f("Teléfono",fmtCel(g.telefono))+f("Fecha de registro",fecha(g.fecha))+f("Recinto",g.recinto)+f("Colegio",g.colegio)+f("Militantes",String(g.mil.length))+"</div></div>"}
+      f("Cédula",g.cedula)+f("Teléfono",fmtCel(g.telefono))+f("Fecha de registro",fecha(g.fecha))+f("Recinto",g.recinto)+f("Colegio",g.colegio)+f("Militantes",String(g.mil.length))+(g.zona?f("Zona",g.zona):"")+"</div></div>"}
   function tabHtml(mil){
     if(!mil.length)return '<p class="rnone">Sin militantes inscritos.</p>';
     return '<table class="rtab"><thead><tr><th>#</th><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Recinto</th><th>Colegio</th><th>Fecha de registro</th></tr></thead><tbody>'+
-      mil.map(function(m,i){return '<tr><td class="n">'+(i+1)+"</td><td>"+esc(m.nombre)+'</td><td class="nw">'+esc(m.cedula||"—")+'</td><td class="nw">'+esc(fmtCel(m.celular)||"—")+"</td><td>"+esc(m.recinto||"—")+'</td><td class="nw">'+esc(m.colegio||"—")+'</td><td class="nw">'+fecha(m.creado)+"</td></tr>"}).join("")+"</tbody></table>"}
+      mil.map(function(m,i){return '<tr><td class="n">'+(i+1)+"</td><td>"+esc(m.nombre)+(porConf(m)?'<br><b style="color:#8a5a00">⚠ A confirmar – VERIFICATE</b>':"")+'</td><td class="nw">'+esc(m.cedula||"—")+'</td><td class="nw">'+esc(fmtCel(m.celular)||"—")+"</td><td>"+esc(m.recinto||"—")+(zCorta(m.recinto)?" · "+esc(zCorta(m.recinto)):"")+'</td><td class="nw">'+esc(m.colegio||"—")+'</td><td class="nw">'+fecha(m.creado)+"</td></tr>"}).join("")+"</tbody></table>"}
   function reportHtml(titulo,gs){
     var tot=gs.reduce(function(a,g){return a+g.mil.length},0),now=new Date();
     var nC=gs.filter(function(g){return g.tipo==="Coordinador"}).length,nS=gs.length-nC;
+    var nV=gs.reduce(function(a,g){return a+g.mil.filter(porConf).length},0);
     return '<div class="rh">'+(CONF.logo?'<img src="'+esc(CONF.logo)+'" alt="">':"")+'<div class="rt"><div class="rc">'+esc(CONF.candidato||"Estructura de apoyo")+'</div><div class="rs">'+esc(titulo)+'</div><div class="rd">Emitido el '+now.toLocaleDateString("es-DO",{day:"2-digit",month:"long",year:"numeric"})+" a las "+now.toLocaleTimeString("es-DO",{hour:"2-digit",minute:"2-digit"})+"</div></div>"+(CONF.foto?'<img src="'+esc(CONF.foto)+'" alt="" style="border-radius:50%;object-fit:cover">':"")+"</div>"+
       '<p class="rsum"><b>Total de militantes: '+tot+"</b>"+(nC?" · Coordinadores: "+nC:"")+(nS?" · Subcoordinadores: "+nS:"")+"</p>"+
+      (nV?'<p class="rsum" style="color:#8a5a00"><b>⚠ '+nV+" militante"+(nV>1?"s":"")+" a confirmar.</b> "+VFTXT+"</p>":"")+
       gs.map(function(g){return '<div class="rgr">'+boxHtml(g)+tabHtml(g.mil)+"</div>"}).join("")+
       '<div class="rfoot">Documento de uso interno. Contiene datos personales: no lo comparta fuera de la estructura.</div>'}
   function printReport(titulo,gs){
@@ -493,7 +538,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   async function fetchSeg(ids){
     var out=[],from=0;
     while(true){
-      var q=sb.from("seguidores").select("creado,coord_id,padron(nombre,cedula,recinto,colegio,celular)").order("creado",{ascending:true}).range(from,from+999);
+      var q=sb.from("seguidores").select("creado,coord_id,padron(nombre,cedula,recinto,colegio,celular,estado)").order("creado",{ascending:true}).range(from,from+999);
       if(ids)q=q.in("coord_id",ids);
       var r=await q;if(r.error)throw r.error;
       out=out.concat(r.data||[]);
@@ -512,7 +557,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var ceds=[];people.forEach(function(p){var d=digits(p.cedula);if(d.length===11){ceds.push(fmtC(d));ceds.push(d)}});
     var pd={};if(ceds.length){var rr=await sb.from("padron").select("cedula,recinto,colegio").in("cedula",ceds);(rr.data||[]).forEach(function(x){pd[digits(x.cedula)]=x})}
     var gs=people.map(function(p){var esJ=!!JEF[p.id],info=pd[digits(p.cedula)]||{};
-      return {tipo:esJ?"Subcoordinador":"Coordinador",padre:esJ&&COO[p.padre_id]?COO[p.padre_id].nombre:"",nombre:p.nombre,cedula:p.cedula,telefono:p.telefono,recinto:info.recinto||p.recinto||"",colegio:info.colegio||"",fecha:cr[p.id],mil:by[p.id]||[]}});
+      return {tipo:esJ?"Subcoordinador":"Coordinador",padre:esJ&&COO[p.padre_id]?COO[p.padre_id].nombre:"",nombre:p.nombre,cedula:p.cedula,telefono:p.telefono,recinto:info.recinto||p.recinto||"",colegio:info.colegio||"",fecha:cr[p.id],
+        zona:zLabel(p.zona_id||(esJ&&COO[p.padre_id]?COO[p.padre_id].zona_id:null))||p.zona||"",mil:by[p.id]||[]}});
     printReport(coord?"Informe de "+COO[coord].nombre:"Informe completo de militantes",gs)})}
 
   function drawHead(){
@@ -543,11 +589,11 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var r=await sb.from("perfiles").select("*").eq("id",u.id).maybeSingle();
     if(r.error){$("lerr").hidden=false;$("lerr").textContent=errMsg(r.error);show("sLogin");return}
     if(!r.data||!r.data.activo){await sb.auth.signOut();show("sLogin");$("lerr").hidden=false;$("lerr").textContent="Su cuenta no está autorizada. Hable con el administrador.";return}
-    ME=r.data;resetIdle();
+    ME=r.data;resetIdle();await loadZonas();
     $("vCoord").hidden=ME.rol==="admin";$("vAdmin").hidden=ME.rol!=="admin";
     show("sApp");
     $("cSub").hidden=!(ME.rol==="coordinador"&&ME.puede_comites);$("snew").innerHTML="";$("cnew").innerHTML="";
-    if(ME.rol==="admin")tab("res");else{drawCoordHead();loadMine();doSearch();if(!$("cSub").hidden)loadSubs()}
+    if(ME.rol==="admin")tab("res");else{drawCoordHead();showMiZona();loadMine();doSearch();if(!$("cSub").hidden)loadSubs()}
   }
 
   /* ---------- entrar / salir ---------- */
@@ -568,7 +614,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     e.preventDefault();if(busy)return;
     if(digits($("mced").value).length!==11){toast("La cédula debe tener 11 números");return}
     if(digits($("mtel").value).length!==10){toast("El teléfono debe tener 10 números");return}
-    busy=true;$("mgo").disabled=true;
+    busy=true;$("mgo").disabled=true;var mcd=digits($("mced").value);
     try{
       var r=await sb.rpc("anadir_manual",{p_nombre:$("mnom").value,p_cedula:$("mced").value,p_celular:$("mtel").value,p_recinto:$("mrec").value,p_colegio:$("mcol").value});
       if(r.error)throw r.error;
@@ -578,7 +624,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       else if(d==="padron:ok")toast("Esa cédula estaba en el padrón. Añadido a su lista");
       else toast("Militante añadido");
       if(d==="ok"||d==="padron:ok"){$("fMan").reset();$("fMan").hidden=true}
-      loadMine();
+      await loadMine();
+      if(d==="padron:ok"){var mp=MINE.filter(function(x){return digits(x.cedula)===mcd})[0];if(porConf(mp))showAviso(mp.nombre)}
     }catch(x){toast(falta(x)?"Falta pegar en Supabase el archivo cambios_v13.sql":errMsg(x))}
     busy=false;$("mgo").disabled=false;
   };
@@ -596,6 +643,10 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
 
   /* ---------- coordinador ---------- */
   function drawCoordHead(){$("cwho").innerHTML="<b>"+esc(ME.nombre)+"</b> · "+(ME.rol==="jefe"?"Subcoordinador":"Coordinador")+(ME.zona?" · Zona: "+esc(ME.zona):"")+(ME.telefono?" · Tel: "+esc(ME.telefono):"")}
+  async function showMiZona(){
+    var e=$("czona");e.hidden=true;MIZONA=null;if(!ZOK)return;
+    try{var r=await sb.rpc("mi_zona");if(!r.error)MIZONA=r.data}catch(x){}
+    if(MIZONA&&zonaPor(MIZONA)){e.textContent="Busca en su zona: "+zLabel(MIZONA)+". Con la cédula completa (11 números) encuentra también a personas de otras zonas.";e.hidden=false}}
   async function loadMine(){
     var r=await sb.rpc("mis_seguidores");
     if(r.error){$("mine").innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
@@ -604,7 +655,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var puedeSub=ME.rol==="coordinador"&&!!ME.puede_comites;
     $("mine").innerHTML=a.length?a.map(function(p){
       var tel=p.celular?'<a href="tel:'+esc(p.celular)+'">'+esc(fmtCel(p.celular))+"</a>":'<span style="color:var(--bad)">Sin teléfono</span>';
-      return '<div class="cw"><div class="row"><div><div class="nm">'+esc(p.nombre)+(p.apodo?' <span class="sub">('+esc(p.apodo)+")</span>":"")+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:""].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula||"Sin cédula")+" · "+tel+'</div></div><div class="acts"><button class="btn ghost" data-ed="'+p.id+'">Editar</button><button class="btn ghost" data-del="'+p.id+'">Quitar</button>'+(puedeSub?'<button class="btn ghost" data-hsub="'+p.id+'">Hacer subcoordinador</button>':"")+'</div></div><div class="medit" id="me-'+p.id+'" hidden></div></div>'}).join(""):'<p class="empty">Todavía no ha añadido militantes.</p>';
+      return '<div class="cw"><div class="row"><div><div class="nm">'+esc(p.nombre)+(p.apodo?' <span class="sub">('+esc(p.apodo)+")</span>":"")+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula||"Sin cédula")+" · "+tel+vfTag(p)+'</div></div><div class="acts"><button class="btn ghost" data-ed="'+p.id+'">Editar</button><button class="btn ghost" data-del="'+p.id+'">Quitar</button>'+(puedeSub?'<button class="btn ghost" data-hsub="'+p.id+'">Hacer subcoordinador</button>':"")+'</div></div><div class="medit" id="me-'+p.id+'" hidden></div></div>'}).join(""):'<p class="empty">Todavía no ha añadido militantes.</p>';
   }
   function mineById(id){return MINE.filter(function(p){return String(p.id)===String(id)})[0]}
   /* Subir un militante a subcoordinador: llena el formulario de siempre con sus datos.
@@ -631,14 +682,14 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     box.hidden=false}
   $("cxl").onclick=function(){var b=this;withBusy(b,async function(){
     var jefe=ME.rol==="jefe",info=await datosPersona(ME.cedula);
-    var gs=[{tipo:jefe?"Subcoordinador":"Coordinador",padre:"",nombre:ME.nombre,cedula:ME.cedula,telefono:ME.telefono,recinto:info.recinto||ME.recinto||"",colegio:info.colegio||"",fecha:ME.creado,
+    var gs=[{tipo:jefe?"Subcoordinador":"Coordinador",padre:"",nombre:ME.nombre,cedula:ME.cedula,telefono:ME.telefono,recinto:info.recinto||ME.recinto||"",colegio:info.colegio||"",fecha:ME.creado,zona:MIZONA?zLabel(MIZONA):ME.zona||"",
       mil:MINE.slice().reverse().map(function(p){return mRow(p,p.creado)})}];
     if(!jefe&&!$("cSub").hidden){
       var fr={};try{var rf=await sb.rpc("fechas_comites");(rf.data||[]).forEach(function(x){fr[x.id]=x.creado})}catch(e){}
       for(var i=0;i<SUBS.length;i++){
         var s=SUBS[i],r=await sb.rpc("militantes_de",{p_coord:s.id});if(r.error)throw r.error;
         var si=await datosPersona(s.cedula);
-        gs.push({tipo:"Subcoordinador",padre:ME.nombre,nombre:s.nombre,cedula:s.cedula,telefono:s.telefono,recinto:si.recinto||s.recinto||"",colegio:si.colegio||"",fecha:fr[s.id],
+        gs.push({tipo:"Subcoordinador",padre:ME.nombre,nombre:s.nombre,cedula:s.cedula,telefono:s.telefono,recinto:si.recinto||s.recinto||"",colegio:si.colegio||"",fecha:fr[s.id],zona:MIZONA?zLabel(MIZONA):s.zona||"",
           mil:(r.data||[]).slice().reverse().map(function(p){return mRow(p,p.creado)})})}}
     printReport("Informe de "+ME.nombre,gs)})};
 
@@ -667,7 +718,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var r=await sb.rpc("militantes_de",{p_coord:id}),ml=$("sm-"+id);if(!ml)return;
     if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     ml.innerHTML=(r.data||[]).map(function(p){
-      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:""].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+(p.celular?" · "+esc(fmtCel(p.celular)):"")+'</div></div><button class="btn ghost" data-sq="'+p.id+'" data-sc="'+id+'" data-nm="'+esc(p.nombre)+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
+      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula)+(p.celular?" · "+esc(fmtCel(p.celular)):"")+vfTag(p)+'</div></div><button class="btn ghost" data-sq="'+p.id+'" data-sc="'+id+'" data-nm="'+esc(p.nombre)+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
   }
   function jefeArgs(s,over){return Object.assign({p_id:s.id,p_nombre:s.nombre,p_zona:s.zona||"",p_telefono:s.telefono||"",p_activo:s.activo,p_cedula:s.cedula||"",p_cargo:s.cargo||"",p_provincia:s.provincia||"",p_municipio:s.municipio||"",p_recinto:s.recinto||""},over||{})}
   $("snb").onclick=function(){var f=$("fSub");f.hidden=!f.hidden;$("snew").innerHTML="";if(!f.hidden)$("snom").focus()};
@@ -695,18 +746,18 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var r=exact?await sb.rpc("buscar_cedula",{p_ced:q}):await sb.rpc("buscar_padron",{q:q});
     if(seq!==sSeq)return;
     if(r.error){$("res").innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
-    var a=r.data||[];
+    var a=r.data||[];SRES={};a.forEach(function(p){SRES[p.id]=p});
     $("res").innerHTML=a.length?a.map(function(p){
       var b;if(p.mio)b='<span class="pill ok">Ya es suyo</span>';else if(p.tomado_por)b='<span class="pill no">Lo tiene '+esc(p.tomado_por)+"</span>";else b='<button class="btn" data-add="'+p.id+'">Añadir</button>';
-      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:""].filter(Boolean).join(" · "))+"<br>"+esc(p.cedula)+"</div></div>"+b+"</div>"}).join(""):'<p class="empty">No aparece en el padrón.</p>';
+      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula)+vfTag(p)+"</div></div>"+b+"</div>"}).join(""):'<p class="empty">No aparece en el padrón.</p>';
   }
   $("q").oninput=function(){clearTimeout(sT);sT=setTimeout(doSearch,350)};
 
   /* ---------- administrador ---------- */
   function tab(t){
-    ["res","coo","pad","aju"].forEach(function(k){var id={res:"tRes",coo:"tCoo",pad:"tPad",aju:"tAju"}[k];$(id).hidden=k!==t});
+    ["res","coo","zon","pad","aju"].forEach(function(k){var id={res:"tRes",coo:"tCoo",zon:"tZon",pad:"tPad",aju:"tAju"}[k];$(id).hidden=k!==t});
     document.querySelectorAll("[data-tab]").forEach(function(b){b.setAttribute("aria-pressed",b.getAttribute("data-tab")===t)});
-    if(t==="res"||t==="coo")loadRes();if(t==="res")loadHist();if(t==="pad")loadPadCount();if(t==="aju")drawAju();
+    if(t==="res"||t==="coo")loadRes();if(t==="res")loadHist();if(t==="pad")loadPadCount();if(t==="zon")loadZonTab();if(t==="aju")drawAju();
   }
   /* ---------- tablero: coordinadores → (subcoordinadores) → militantes ---------- */
   var META=0;
@@ -718,7 +769,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       '</div><span class="cnt">'+n+'</span></summary><div class="dcb" id="db-'+p.id+'"><p class="empty">Cargando…</p></div></details>'}
   function miHtml(p,creado){
     var tel=p.celular?'<a href="tel:'+esc(digits(p.celular))+'">'+esc(fmtCel(p.celular))+"</a>":'<span style="color:var(--bad)">Sin teléfono</span>';
-    return '<div class="mi"><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(cv(p.cedula)||"Sin cédula")+" · "+tel+"<br>"+esc([p.recinto,p.colegio?"Colegio "+p.colegio:"",fecha(creado)].filter(Boolean).join(" · "))+"</div></div>"}
+    return '<div class="mi"><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(cv(p.cedula)||"Sin cédula")+" · "+tel+"<br>"+esc([lugar(p),fecha(creado)].filter(Boolean).join(" · "))+vfTag(p)+"</div></div>"}
   function renderDash(){
     var open=[].map.call(document.querySelectorAll("#dash details[open]"),function(d){return d.getAttribute("data-cid")});
     var co=Object.keys(COO).map(function(k){return COO[k]}).sort(function(a,b){return (b.activo-a.activo)||(b.n-a.n)||a.nombre.localeCompare(b.nombre)});
@@ -735,7 +786,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   async function loadDash(id){
     var box=$("db-"+id);if(!box)return;
     var esJ=!!JEF[id];
-    var r=await sb.from("seguidores").select("creado,padron(nombre,cedula,recinto,colegio,celular)").eq("coord_id",id).order("creado",{ascending:false});
+    var r=await sb.from("seguidores").select("creado,padron(nombre,cedula,recinto,colegio,celular,estado)").eq("coord_id",id).order("creado",{ascending:false});
     if(r.error){box.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     var a=r.data||[],js=esJ?[]:jefesDe(id);
     box.innerHTML=(esJ?"":'<div class="dact"><button class="btn" data-pdf="'+id+'">Informe PDF</button><button class="btn ghost" data-goc="'+id+'">Editar coordinador</button></div>')+
@@ -746,6 +797,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var d=e.target;if(!d.classList||!d.classList.contains("dc")||!d.open)return;
     loadDash(d.getAttribute("data-cid"))},true);
   async function loadRes(){
+    await loadZonas();
     var r=await sb.rpc("resumen");
     if(r.error){toast(errMsg(r.error));return}
     var d=r.data,co=d.coordinadores||[],act=co.filter(function(c){return c.activo}).length;
@@ -755,6 +807,9 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       return '<div class="row"><div><div class="nm">'+esc(x.nombre)+'</div><div class="sub">'+esc(x.coord)+" · "+hace(x.creado)+"</div></div></div>"}).join("")||'<p class="empty">Sin registros.</p>';
     COO={};co.forEach(function(c){COO[c.id]=c});
     JEF={};(d.jefes||[]).forEach(function(j){JEF[j.id]=j});
+    if(ZOK){var rz=await sb.from("perfiles").select("id,zona_id");(rz.data||[]).forEach(function(x){if(COO[x.id])COO[x.id].zona_id=x.zona_id;if(JEF[x.id])JEF[x.id].zona_id=x.zona_id})}
+    $("czid").innerHTML=zonaOpts($("czid").value);
+    drawZres();
     META=Number(d.meta||0);
     renderDash();
     $("clist").innerHTML=co.map(function(c){
@@ -779,17 +834,71 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(OPEN&&OPEN!==id){var o=$("cd-"+OPEN);if(o)o.hidden=true}
     OPEN=id;var c=COO[id];box.hidden=false;
     var js=jefesDe(id);
-    box.innerHTML='<form class="fld" data-edit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(c.nombre)+'" required></div><div><label>Cédula</label><input name="c" inputmode="numeric" maxlength="13" placeholder="000-0000000-0" value="'+esc(c.cedula||"")+'" required></div><div class="cf"><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'" required></div><div><label>Zona</label><input name="z" value="'+esc(c.zona||"")+'"></div></div><label class="chk"><input type="checkbox" name="pc"'+(c.puede_comites?" checked":"")+'> Puede crear subcoordinadores</label><p class="hint">Cambiar el nombre aquí no cambia su usuario de entrada.</p><button class="btn wide" type="submit">Guardar cambios</button></form>'+
+    box.innerHTML='<form class="fld" data-edit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(c.nombre)+'" required></div><div><label>Cédula</label><input name="c" inputmode="numeric" maxlength="13" placeholder="000-0000000-0" value="'+esc(c.cedula||"")+'" required></div><div class="cf"><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'" required></div><div><label>Zona</label>'+(ZOK?'<select name="zid">'+zonaOpts(c.zona_id)+"</select>"+(c.zona&&!c.zona_id?'<p class="hint">Escrito antes: «'+esc(c.zona)+"»</p>":""):'<input name="z" value="'+esc(c.zona||"")+'">')+'</div></div><label class="chk"><input type="checkbox" name="pc"'+(c.puede_comites?" checked":"")+'> Puede crear subcoordinadores</label><p class="hint">Cambiar el nombre aquí no cambia su usuario de entrada.</p><button class="btn wide" type="submit">Guardar cambios</button></form>'+
       '<button class="btn ghost wide" style="margin-top:10px" data-rc="'+id+'">Restablecer clave a su cédula</button>'+
       '<h3 class="mh">Subcoordinadores ('+js.length+')</h3>'+(js.length?js.map(function(j){
         return '<div class="row"><div><div class="nm">'+esc(j.nombre)+(j.activo?"":" (desactivado)")+'</div><div class="sub">'+j.n+" militantes"+(j.telefono?" · "+esc(j.telefono):"")+'</div></div><button class="btn ghost" data-rc="'+j.id+'">Clave = cédula</button></div>'}).join(""):'<p class="empty">No tiene subcoordinadores.</p>')+
       '<h3 class="mh">Militantes propios</h3><button class="btn wide" data-pdf="'+id+'" style="margin-bottom:6px">Informe en PDF (con sus subcoordinadores)</button><div id="ml-'+id+'"><p class="empty">Cargando…</p></div>';
-    var r=await sb.from("seguidores").select("padron_id,creado,padron(nombre,cedula,recinto,colegio,celular)").eq("coord_id",id).order("creado",{ascending:false});
+    var r=await sb.from("seguidores").select("padron_id,creado,padron(nombre,cedula,recinto,colegio,celular,estado)").eq("coord_id",id).order("creado",{ascending:false});
     var ml=$("ml-"+id);if(!ml)return;
     if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     ml.innerHTML=(r.data||[]).map(function(x){var p=x.padron||{};
-      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc([p.recinto,p.colegio?"Colegio "+p.colegio:""].filter(Boolean).join(" · "))+"<br>"+esc(cv(p.cedula)||"Sin cédula")+(p.celular?" · "+esc(fmtCel(p.celular)):"")+'</div></div><button class="btn ghost" data-aq="'+x.padron_id+'" data-co="'+id+'" data-nm="'+esc(p.nombre)+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
+      return '<div class="row"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(cv(p.cedula)||"Sin cédula")+(p.celular?" · "+esc(fmtCel(p.celular)):"")+vfTag(p)+'</div></div><button class="btn ghost" data-aq="'+x.padron_id+'" data-co="'+id+'" data-nm="'+esc(p.nombre)+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
   }
+  /* ---- zonas ---- */
+  async function zonaFilas(){
+    var m={};try{var r=await sb.rpc("militantes_por_zona");(r.data||[]).forEach(function(x){m[x.zona_id==null?"x":x.zona_id]=Number(x.militantes)})}catch(e){}
+    var cos=Object.keys(COO).map(function(k){return COO[k]});
+    return {m:m,rows:ZONAS.map(function(z){
+      var cs=cos.filter(function(c){return c.zona_id===z.id});
+      return {z:z,coords:cs,act:cs.filter(function(c){return c.activo}).length,mil:m[z.id]||0,nrec:Object.keys(ZREC).filter(function(k){return ZREC[k]===z.id}).length}})}}
+  async function drawZres(){
+    var box=$("zres");
+    if(!ZOK){box.innerHTML='<p class="empty">Falta pegar en Supabase el archivo zonas.sql.</p>';return}
+    if(!ZONAS.length){box.innerHTML='<p class="empty">Todavía no hay zonas. Créelas en la pestaña Zonas.</p>';return}
+    var d=await zonaFilas();
+    box.innerHTML=d.rows.map(function(x){
+      return '<div class="row"><div><div class="nm">'+esc(zLabel(x.z.id))+'</div><div class="sub">'+x.act+" coordinador"+(x.act===1?"":"es")+" activo"+(x.act===1?"":"s")+" · "+x.nrec+" recinto"+(x.nrec===1?"":"s")+"</div>"+(x.act?"":'<span class="vf">⚠ Sin coordinador activo</span>')+'</div><span class="pill ok">'+x.mil+"</span></div>"}).join("")+
+      (d.m.x?'<div class="row"><div><div class="nm">Sin zona</div><div class="sub">Militantes de recintos que no están en ninguna zona</div></div><span class="pill no">'+d.m.x+"</span></div>":"")}
+  function zonaBody(x){
+    var z=x.z,mine=RECS.filter(function(r){return ZREC[r.recinto]===z.id}),libres=RECS.filter(function(r){return !ZREC[r.recinto]});
+    var chk=function(r,on){return '<label class="zr"><input type="checkbox" name="rec" value="'+esc(r.recinto)+'"'+(on?" checked":"")+"><span>"+esc(r.recinto)+' <span class="sub">· '+r.personas+" personas</span></span></label>"};
+    return '<form class="fld" data-zedit="'+z.id+'" autocomplete="off" style="margin-top:8px"><div class="cf"><div><label>Número</label><input name="num" type="number" inputmode="numeric" min="1" value="'+z.numero+'" required></div><div><label>Nombre</label><input name="nom" maxlength="60" value="'+esc(z.nombre)+'"></div></div>'+
+      '<h3 class="mh">Recintos de esta zona ('+mine.length+")</h3>"+(mine.length?'<p class="hint">Desmarque el que no sea de esta zona.</p>'+mine.map(function(r){return chk(r,true)}).join(""):'<p class="empty">Ninguno todavía.</p>')+
+      '<h3 class="mh">Recintos sin zona ('+libres.length+")</h3>"+(libres.length?'<p class="hint">Marque los que son de esta zona.</p>'+libres.map(function(r){return chk(r,false)}).join(""):'<p class="empty">'+(RECS.length?"Todos los recintos ya tienen zona.":"Primero cargue el padrón.")+"</p>")+
+      '<p class="hint">Los recintos de otras zonas no salen aquí. Para pasar uno a esta zona, desmárquelo primero en la otra.</p>'+
+      '<p class="sub">'+(x.coords.length?"Coordinadores: "+esc(x.coords.map(function(c){return c.nombre+(c.activo?"":" (desactivado)")}).join(", ")):"Sin coordinadores. Asígnelos en Coordinadores → Ver / editar.")+"</p>"+
+      '<button class="btn wide" type="submit">Guardar zona</button></form><button class="btn ghost wide" style="margin-top:8px" data-zdel="'+z.id+'">Borrar esta zona</button>'}
+  async function loadZonTab(){
+    var st=$("zstat"),zl=$("zlist");
+    await loadZonas();
+    if(!ZOK){st.innerHTML='<div class="note bad">Falta pegar en Supabase el archivo zonas.sql. Mientras tanto, lo demás de la app funciona igual.</div>';zl.innerHTML="";$("fZon").hidden=true;return}
+    $("fZon").hidden=false;
+    if(!Object.keys(COO).length)await loadRes();
+    var rr=await sb.rpc("recintos_padron");RECS=rr.error?[]:rr.data||[];
+    var d=await zonaFilas();
+    var sinZ=RECS.filter(function(r){return !ZREC[r.recinto]}).length,sinC=d.rows.filter(function(x){return !x.act}).length,sinR=d.rows.filter(function(x){return !x.nrec}).length;
+    st.innerHTML='<div class="note'+(sinZ||sinC||sinR||!ZONAS.length?"":" ok")+'">'+ZONAS.length+" zona"+(ZONAS.length===1?"":"s")+" · "+RECS.length+" recintos en el padrón"+
+      (sinZ?"<br>⚠ "+sinZ+" recinto"+(sinZ>1?"s":"")+" sin zona":"")+(sinR?"<br>⚠ "+sinR+" zona"+(sinR>1?"s":"")+" sin recintos (sus coordinadores no encuentran a nadie por nombre)":"")+
+      (sinC?"<br>⚠ "+sinC+" zona"+(sinC>1?"s":"")+" sin coordinador activo":"")+(ZONAS.length&&!sinZ&&!sinC&&!sinR?"<br>Todo asignado.":"")+"</div>";
+    zl.innerHTML=d.rows.map(function(x){var z=x.z;
+      return '<details class="dc" data-zid="'+z.id+'"'+(ZOPEN===z.id?" open":"")+'><summary><div class="dn"><div class="nm">'+esc(zLabel(z.id))+'</div><div class="sub">'+x.nrec+" recintos · "+x.act+" coord. activos · "+x.mil+" militantes</div>"+(x.nrec?"":'<span class="vf">⚠ Sin recintos</span> ')+(x.act?"":'<span class="vf">⚠ Sin coordinador</span>')+'</div><span class="cnt">'+z.numero+'</span></summary><div class="dcb">'+zonaBody(x)+"</div></details>"}).join("")||'<p class="empty">Todavía no hay zonas.</p>'}
+  document.addEventListener("toggle",function(e){var d=e.target;if(!d.getAttribute||!d.getAttribute("data-zid"))return;
+    var id=+d.getAttribute("data-zid");if(d.open)ZOPEN=id;else if(ZOPEN===id)ZOPEN=null},true);
+  $("fZon").onsubmit=async function(e){
+    e.preventDefault();var num=parseInt($("znum").value,10);if(!(num>0)){toast("Escriba el número de la zona");return}
+    $("zgo").disabled=true;
+    var r=await sb.from("zonas").insert({numero:num,nombre:$("znom").value.trim()}).select("id").single();
+    $("zgo").disabled=false;
+    if(r.error){toast(/duplicate|unique/i.test(r.error.message||"")?"Ya existe la zona "+num:errMsg(r.error));return}
+    $("fZon").reset();ZOPEN=r.data.id;toast("Zona "+num+" creada. Ahora marque sus recintos.");loadZonTab()};
+  async function borrarZona(id){
+    var z=zonaPor(id);if(!z)return;
+    if(!confirm("¿Borrar la "+zLabel(id)+"?\n\nSus recintos quedan sin zona y sus coordinadores quedan sin zona (verán todo el padrón). No se borra ningún militante."))return;
+    await sb.from("perfiles").update({zona:""}).eq("zona_id",id);
+    var r=await sb.from("zonas").delete().eq("id",id);
+    if(r.error){toast(errMsg(r.error));return}
+    toast("Zona borrada");ZOPEN=null;await loadRes();loadZonTab()}
   $("rfs").onclick=function(){loadRes();loadHist()};
   $("axl").onclick=function(){reportAdmin(this,null)};
   function fmtC(v){var d=String(v).replace(/\D/g,"").slice(0,11);return d.length>10?d.slice(0,3)+"-"+d.slice(3,10)+"-"+d.slice(10):d.length>3?d.slice(0,3)+"-"+d.slice(3):d}
@@ -800,7 +909,9 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var nom=$("cnom").value.trim().replace(/\s+/g," "),tel=$("ctel").value;
     try{
       var c=await crearCuenta(nom,$("ced").value,tel);
-      var p=await sb.from("perfiles").insert({id:c.id,nombre:nom,cedula:c.ced,zona:$("czon").value.trim(),telefono:tel,rol:"coordinador",puede_comites:$("cperm").checked});
+      var zid=Number($("czid").value)||null,row={id:c.id,nombre:nom,cedula:c.ced,zona:zid?zLabel(zid):"",telefono:tel,rol:"coordinador",puede_comites:$("cperm").checked};
+      if(ZOK)row.zona_id=zid;
+      var p=await sb.from("perfiles").insert(row);
       if(p.error)throw p.error;
       $("fCoo").reset();
       $("cnew").innerHTML=credCard(nom,tel,"coordinador");
@@ -925,8 +1036,10 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       if(rq.error)toast(errMsg(rq.error));else{toast("Quitado de la lista");loadSubs()}return}
     if(g("data-aq")){var r3=await sb.from("seguidores").delete().eq("padron_id",+g("data-aq"));if(r3.error)toast(errMsg(r3.error));else{toast("Quitado de la lista");loadRes()}return}
     if(g("data-act")){setActivo(g("data-act"),g("data-to")==="1");return}
-    if(g("data-add")){t.disabled=true;var r=await sb.rpc("anadir_seguidor",{p_id:+g("data-add")});
-      if(r.error)toast(errMsg(r.error));else if(r.data==="ok")toast("Añadido");else if(r.data==="ya_tomado")toast("Esa persona ya la tiene otro coordinador");
+    if(g("data-avx")){$("avis").hidden=true;return}
+    if(g("data-zdel")){borrarZona(+g("data-zdel"));return}
+    if(g("data-add")){var sp=SRES[g("data-add")];t.disabled=true;var r=await sb.rpc("anadir_seguidor",{p_id:+g("data-add")});
+      if(r.error)toast(errMsg(r.error));else if(r.data==="ok"){toast("Añadido");if(porConf(sp))showAviso(sp.nombre)}else if(r.data==="ya_tomado")toast("Esa persona ya la tiene otro coordinador");
       loadMine();doSearch();return}
     if(g("data-del")){var pm=mineById(g("data-del"));
       if(!confirm("¿Quitar a "+(pm?pm.nombre:"esta persona")+" de su lista?\n\nPodrá volver a añadirla después si hace falta."))return;
@@ -951,12 +1064,30 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       var rs=await sb.rpc("editar_jefe",jefeArgs(s,{p_nombre:sn,p_telefono:f.elements.t.value,p_zona:f.elements.z.value.trim()}));
       if(rs.error){toast(errMsg(rs.error));return}
       toast("Cambios guardados");loadSubs();return}
+    if(f.getAttribute("data-zedit")){
+      e.preventDefault();var zid=+f.getAttribute("data-zedit"),num=parseInt(f.elements.num.value,10);
+      if(!(num>0)){toast("Escriba el número de la zona");return}
+      var recs=[].filter.call(f.querySelectorAll('input[name="rec"]'),function(x){return x.checked}).map(function(x){return x.value});
+      var bz=f.querySelector("[type=submit]");bz.disabled=true;
+      try{
+        var ru=await sb.from("zonas").update({numero:num,nombre:f.elements.nom.value.trim()}).eq("id",zid);
+        if(ru.error)throw /duplicate|unique/i.test(ru.error.message||"")?new Error("Ya existe otra zona con el número "+num):ru.error;
+        var rg=await sb.rpc("guardar_recintos_zona",{p_zona:zid,p_recintos:recs});if(rg.error)throw rg.error;
+        var co=Object.keys(COO).map(function(k){return COO[k]}).filter(function(c){return c.zona_id===zid});
+        await loadZonas();
+        for(var i=0;i<co.length;i++)await sb.from("perfiles").update({zona:zLabel(zid)}).eq("id",co[i].id);
+        ZOPEN=zid;toast("Zona guardada: "+rg.data+" recinto"+(rg.data===1?"":"s"));loadZonTab();
+      }catch(x){toast(errMsg(x))}
+      bz.disabled=false;return}
     if(!f.getAttribute("data-edit"))return;
     e.preventDefault();var id=f.getAttribute("data-edit"),n=f.elements.n.value.trim(),cd=digits(f.elements.c.value);
     if(!n){toast("Escriba el nombre");return}
     if(cd.length!==11){toast("La cédula debe tener 11 números");return}
     if(digits(f.elements.t.value).length!==10){toast("El teléfono debe tener 10 números");return}
-    var r=await sb.from("perfiles").update({nombre:n,cedula:cd?fmtC(cd):"",zona:f.elements.z.value.trim(),telefono:f.elements.t.value,puede_comites:f.elements.pc.checked}).eq("id",id);
+    var upd={nombre:n,cedula:cd?fmtC(cd):"",telefono:f.elements.t.value,puede_comites:f.elements.pc.checked},c0=COO[id]||{};
+    if(f.elements.zid){var zid=Number(f.elements.zid.value)||null;upd.zona_id=zid;upd.zona=zid?zLabel(zid):(c0.zona_id?"":c0.zona||"")}
+    else upd.zona=f.elements.z.value.trim();
+    var r=await sb.from("perfiles").update(upd).eq("id",id);
     if(r.error){toast(errMsg(r.error));return}
     toast("Cambios guardados");loadRes()
   });
