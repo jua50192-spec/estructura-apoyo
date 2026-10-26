@@ -121,6 +121,15 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .fold{border:1px solid var(--line);border-radius:10px;margin-top:12px;padding:0 12px}
 .fold>summary{cursor:pointer;padding:12px 0;font:700 18px var(--disp)}
 .fold[open]>summary{border-bottom:1px solid var(--line);margin-bottom:6px}
+.fold>summary{list-style:none;display:flex;align-items:center;gap:10px}
+.fold>summary::-webkit-details-marker{display:none}
+.fold>summary::after{content:"";margin-left:auto;flex:none;width:9px;height:9px;border-right:2px solid var(--mute);border-bottom:2px solid var(--mute);transform:rotate(45deg);margin-top:-4px;transition:transform .15s}
+.fold[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
+.fold.big{border:0;padding:0;background:transparent}
+.fold.big>summary{background:var(--brand);color:var(--brand-ink);border-radius:10px;padding:14px 16px;font-size:22px}
+.fold.big>summary::after{border-color:var(--brand-ink)}
+.fold.big[open]>summary{border-bottom:0;margin-bottom:8px}
+.fold .fcnt{font:700 15px var(--body);background:rgba(255,255,255,.22);border-radius:99px;padding:2px 10px}
 /* ---- informe para imprimir / guardar como PDF ---- */
 #printArea{display:none}
 @page{size:A4;margin:12mm 10mm}
@@ -249,14 +258,14 @@ a.btn{display:block;text-align:center;text-decoration:none}
           <div class="t"><b id="aC">0</b><span>Coordinadores activos</span></div>
         </div>
         <p class="sub" id="aP" style="margin:10px 0 0"></p>
-        <div class="dtop">
-          <h2 style="margin:0">Coordinadores</h2>
-          <button id="rfs" class="btn ghost" title="Actualizar">↻ Actualizar</button>
-        </div>
-        <p class="hint" style="margin:0 0 8px">Toque un nombre para ver sus militantes.</p>
-        <input id="dq" type="search" placeholder="Buscar coordinador…" autocomplete="off">
-        <div id="dash" style="margin-top:8px"></div>
-        <button id="axl" class="btn wide" style="margin-top:12px">Informe completo en PDF</button>
+        <button id="rfs" class="btn ghost wide" style="margin-top:12px">↻ Actualizar</button>
+        <details class="fold big" id="fCoo2">
+          <summary><span>Coordinadores</span><span class="fcnt" id="dcount">0</span></summary>
+          <p class="hint" style="margin:4px 0 8px">Toque un nombre para ver sus militantes.</p>
+          <input id="dq" type="search" placeholder="Buscar coordinador…" autocomplete="off">
+          <div id="dash" style="margin-top:8px"></div>
+          <button id="axl" class="btn wide" style="margin:4px 0 12px">Informe completo en PDF</button>
+        </details>
         <details class="fold"><summary>Últimos registros</summary><div id="last"></div></details>
         <details class="fold"><summary>Historial de cambios</summary>
           <p class="hint" style="margin:0 0 4px">Quién añadió o quitó a cada militante (últimos 50).</p>
@@ -323,7 +332,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 25-oct-2026 (14)</p>
+  <p class="ver" id="ver">Versión 25-oct-2026 (15)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -696,6 +705,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   function renderDash(){
     var open=[].map.call(document.querySelectorAll("#dash details[open]"),function(d){return d.getAttribute("data-cid")});
     var co=Object.keys(COO).map(function(k){return COO[k]}).sort(function(a,b){return (b.activo-a.activo)||(b.n-a.n)||a.nombre.localeCompare(b.nombre)});
+    $("dcount").textContent=co.length;
     $("dash").innerHTML=co.length?co.map(function(c){return dcHtml(c,false)}).join(""):'<p class="empty">Todavía no hay coordinadores.</p>';
     filtrarDash();
     open.forEach(function(id){var d=document.querySelector('#dash details[data-cid="'+id+'"]');if(d)d.open=true})}
