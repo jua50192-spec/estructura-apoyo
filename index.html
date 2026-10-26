@@ -8,8 +8,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap">
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.1/dist/umd/supabase.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script type="module">import * as pdfjs from "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.min.mjs";window.pdfjsLib=pdfjs;pdfjs.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.worker.min.mjs";</script>
 <style>
 :root{
   --bg:#eef2f4; --card:#ffffff; --ink:#14212b; --mute:#5b6b76; --line:#d3dce1;
@@ -382,7 +381,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 26-oct-2026 (23)</p>
+  <p class="ver" id="ver">Versión 26-oct-2026 (24)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -1123,7 +1122,6 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   $("pgo").onclick=async function(){
     if(!FILES.length||busy)return;
     if(typeof pdfjsLib==="undefined"){$("pmsg").textContent="No se pudo cargar el lector de PDF. Revise el internet y recargue.";return}
-    pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
     busy=true;STOP=false;var btn=this;btn.disabled=true;$("pstop").hidden=false;$("pstop").disabled=false;$("pstop").textContent="Detener";
     var circ=digits($("pcirc").value),force=$("pforce").checked,conF=$("pfot").checked&&!$("pfot").disabled;
     try{localStorage.setItem("apoyo.circ",$("pcirc").value)}catch(e){}
@@ -1148,7 +1146,10 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
         var G=gs[j];
         if(circ&&G.circ&&Number(G.circ)!==Number(circ)){T.otra++;filaCol(G,"Otra circ. ("+G.circ+")","no");continue}
         if(circ&&!G.circ){T.rev.push(f.name+" · colegio "+(G.colegio||"?")+": no se leyó la circunscripción");filaCol(G,"Revisar","bad");continue}
-        if(!G.ok&&!force){T.rev.push((f.webkitRelativePath||f.name)+" · colegio "+(G.colegio||"?")+": leídos "+G.people.length+" de "+(G.mil==null?"?":G.mil));filaCol(G,"Revisar","bad");continue}
+        if(!G.ok&&!force){
+          var sNom=G.people.filter(function(q){return !q.nombre}).length,sEst=G.people.filter(function(q){return !q.estado}).length;
+          T.rev.push((f.webkitRelativePath||f.name)+" · colegio "+(G.colegio||"?")+": leídos "+G.people.length+" de "+(G.mil==null?"?":G.mil)+(sNom?" · "+sNom+" sin nombre":"")+(sEst?" · "+sEst+" sin estado":""));
+          filaCol(G,"Revisar","bad");continue}
         try{await subirColegio(G,conF,T,docA);T.col++;filaCol(G,"Subido","ok")}
         catch(e){T.err=(f.webkitRelativePath||f.name)+": "+(falta(e)?"falta pegar en Supabase proteger-padron.sql":errMsg(e));filaCol(G,"Error","bad")}
       }
