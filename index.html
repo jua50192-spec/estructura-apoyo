@@ -382,7 +382,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 26-oct-2026 (22)</p>
+  <p class="ver" id="ver">Versión 26-oct-2026 (23)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -1079,38 +1079,43 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       ox.drawImage(cv,Math.min(r[0],r[2]),Math.min(r[1],r[3]),Math.abs(r[2]-r[0]),Math.abs(r[3]-r[1]),0,0,W,H);
       q.foto=await new Promise(function(res){out.toBlob(res,"image/jpeg",0.78)})}
     cv.width=cv.height=0}
-  async function leerArchivo(file,conFotos){
-    var task=pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}),doc=await task.promise,pages=[];
+  /* Abre el PDF y lee el texto de todas las hojas. Recuerda en qué hoja está cada persona. */
+  async function abrirArchivo(file){
+    var task=pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false});
     try{
+      var doc=await task.promise,pages=[];
       for(var i=1;i<=doc.numPages;i++){
         var pg=await doc.getPage(i),vp=pg.getViewport({scale:1}),tc=await pg.getTextContent();
         var items=tc.items.map(function(t){return{s:t.str,x:t.transform[4],y:t.transform[5],w:t.width,h:Math.abs(t.transform[3])||t.height}});
-        var res=parsePage(items,vp.width);pages.push(res);
-        if(conFotos&&res.people.length){try{await fotosDePagina(pg,res.people)}catch(e){FERR=errMsg(e)}}
-        pg.cleanup();
-      }
-    }finally{try{task.destroy()}catch(e){}}
-    return joinPages(pages)}
-  async function subirColegio(G,conFotos,T){
+        var res=parsePage(items,vp.width);res.people.forEach(function(q){q.pg=i});pages.push(res);
+        pg.cleanup()}
+      return {task:task,doc:doc,gs:joinPages(pages)}}
+    catch(e){try{task.destroy()}catch(x){}throw e}}
+  async function subirColegio(G,conFotos,T,doc){
     var rows=G.people.map(function(q){return {cedula:q.ced,nombre:q.nombre,estado:q.estado||"",celular:q.cel||q.tel||"",recinto:q.rec||"",colegio:q.colegio||""}});
     for(var i=0;i<rows.length;i+=500){var part=rows.slice(i,i+500);await conReintento(function(){return sb.rpc("subir_padron",{p_filas:part})})}
     T.per+=rows.length;
-    var conF=G.people.filter(function(q){return q.foto});G.nf=conF.length;
-    if(!conFotos||!conF.length)return;
-    var ids={},ceds=conF.map(function(q){return q.ced});
+    if(!conFotos)return;
+    var ids={},ceds=G.people.map(function(q){return q.ced});
     for(var k=0;k<ceds.length;k+=150){var cp=ceds.slice(k,k+150);
       var r=await conReintento(function(){return sb.from("padron").select("id,cedula").in("cedula",cp)});
       (r.data||[]).forEach(function(x){ids[x.cedula]=x.id})}
-    var cola=conF.slice();
+    /* Solo se sacan del PDF las fotos que todavía no están en el servidor */
+    var ya=0,falta=G.people.filter(function(q){var id=ids[q.ced];if(!id)return false;if(FOTOSET&&FOTOSET.has(id+".jpg")){ya++;return false}return true});
+    T.fotYa+=ya;
+    var porHoja={};falta.forEach(function(q){(porHoja[q.pg]=porHoja[q.pg]||[]).push(q)});
+    var hojas=Object.keys(porHoja);
+    for(var h=0;h<hojas.length;h++){
+      try{var pg=await doc.getPage(+hojas[h]);await fotosDePagina(pg,porHoja[hojas[h]]);pg.cleanup()}catch(e){FERR=errMsg(e)}}
+    var cola=falta.filter(function(q){return q.foto}),nuevas=0;
     async function obrero(){
       while(cola.length){
-        var q=cola.shift(),id=ids[q.ced];if(!id)continue;
-        var nm=id+".jpg";
-        if(FOTOSET&&FOTOSET.has(nm)){T.fotYa++;continue}
+        var q=cola.shift(),nm=ids[q.ced]+".jpg";
         await conReintento(function(){return sb.storage.from("fotos").upload(nm,q.foto,{upsert:true,contentType:"image/jpeg",cacheControl:"86400"})});
-        if(FOTOSET)FOTOSET.add(nm);T.fot++}}
-    await Promise.all([obrero(),obrero(),obrero(),obrero()]);
-    G.people.forEach(function(q){q.foto=null})}
+        if(FOTOSET)FOTOSET.add(nm);T.fot++;nuevas++;q.foto=null}}
+    var ob=[];for(var o=0;o<8;o++)ob.push(obrero());   /* 8 fotos a la vez */
+    await Promise.all(ob);
+    G.nf=ya+nuevas}
   function filaCol(G,res,clase,arch){
     var tr=document.createElement("tr");
     tr.innerHTML="<td>"+esc(G?G.rec||"—":arch)+"</td><td>"+esc(G?G.colegio||"—":"—")+"</td><td>"+(G&&G.mil!=null?G.mil:"—")+"</td><td>"+(G?G.people.length:"—")+"</td><td>"+(G&&G.nf!=null?G.nf:"—")+'</td><td><span class="pill '+clase+'">'+esc(res)+"</span></td>";
@@ -1127,23 +1132,30 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     $("tb").innerHTML="";$("rep").hidden=false;$("pres").innerHTML="";
     if(conF){setProg(0,"Revisando las fotos que ya están en el servidor…");try{FOTOSET=await listarFotos()}catch(e){FOTOSET=null}}
     var t0=Date.now();
+    var abrir=function(fl){return abrirArchivo(fl).then(function(r){return {r:r}},function(e){return {e:e}})};
+    var prox=FILES.length?abrir(FILES[0]):null;
     for(var i=0;i<FILES.length&&!STOP;i++){
       var f=FILES[i],eta="";resetIdle();
       if(i>0){var min=Math.round((Date.now()-t0)/i*(FILES.length-i)/60000);eta=min>0?" · faltan unos "+(min>90?Math.round(min/60)+" h":min+" min"):""}
       setProg(i/FILES.length,"Archivo "+(i+1)+" de "+FILES.length+": "+(f.webkitRelativePath||f.name)+eta);
-      var gs;
-      try{gs=await leerArchivo(f,conF)}catch(e){T.rev.push((f.webkitRelativePath||f.name)+": no se pudo leer ("+errMsg(e)+")");filaCol(null,"No se pudo leer","bad",f.name);continue}
+      var got=await prox;
+      prox=(i+1<FILES.length&&!STOP)?abrir(FILES[i+1]):null;   /* ya va leyendo el siguiente */
+      if(got.e){T.rev.push((f.webkitRelativePath||f.name)+": no se pudo leer ("+errMsg(got.e)+")");filaCol(null,"No se pudo leer","bad",f.name);continue}
+      var gs=got.r.gs,docA=got.r.doc;
+      try{
       if(!gs.length){T.rev.push((f.webkitRelativePath||f.name)+": sin personas");filaCol(null,"Sin personas","bad",f.name);continue}
       for(var j=0;j<gs.length&&!T.err;j++){
         var G=gs[j];
         if(circ&&G.circ&&Number(G.circ)!==Number(circ)){T.otra++;filaCol(G,"Otra circ. ("+G.circ+")","no");continue}
         if(circ&&!G.circ){T.rev.push(f.name+" · colegio "+(G.colegio||"?")+": no se leyó la circunscripción");filaCol(G,"Revisar","bad");continue}
         if(!G.ok&&!force){T.rev.push((f.webkitRelativePath||f.name)+" · colegio "+(G.colegio||"?")+": leídos "+G.people.length+" de "+(G.mil==null?"?":G.mil));filaCol(G,"Revisar","bad");continue}
-        try{await subirColegio(G,conF,T);T.col++;filaCol(G,"Subido","ok")}
+        try{await subirColegio(G,conF,T,docA);T.col++;filaCol(G,"Subido","ok")}
         catch(e){T.err=(f.webkitRelativePath||f.name)+": "+(falta(e)?"falta pegar en Supabase proteger-padron.sql":errMsg(e));filaCol(G,"Error","bad")}
       }
+      }finally{try{got.r.task.destroy()}catch(e){}}
       if(T.err)break;
     }
+    if(prox){prox.then(function(x){try{x.r.task.destroy()}catch(e){}})}
     try{if(wl)wl.release()}catch(e){}
     $("prog").hidden=true;
     var fin=T.err?"Se detuvo por un error.":STOP?"Detenido.":"Terminado.";
