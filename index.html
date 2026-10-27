@@ -106,6 +106,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
 .fo[data-ok]{cursor:zoom-in}
 .fover{position:fixed;inset:0;background:rgba(0,0,0,.78);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:30;padding:16px;color:#fff;text-align:center}
 .fover img{width:min(70vw,260px);border-radius:10px;background:#fff}
+.req{color:var(--bad);font-weight:700;margin-left:2px}
 .vf{display:inline-block;margin-top:3px;font-size:12px;font-weight:600;border-radius:6px;padding:2px 7px;background:var(--warnbg);color:var(--warn)}
 .zr{display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
 .zr:first-child{border-top:0}
@@ -297,11 +298,12 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
       <div id="tCoo" hidden>
         <h2>Añadir coordinador</h2>
         <form id="fCoo" class="fld" autocomplete="off">
-          <div><label for="cnom">Nombre completo</label><input id="cnom" required></div>
-          <div><label for="ced">Cédula</label><input id="ced" inputmode="numeric" placeholder="000-0000000-0" maxlength="13" required></div>
+          <p class="hint" style="margin:0">Los campos con <span class="req" aria-hidden="true">*</span> son obligatorios.</p>
+          <div><label for="cnom">Nombre completo<span class="req" aria-hidden="true">*</span></label><input id="cnom" required></div>
+          <div><label for="ced">Cédula<span class="req" aria-hidden="true">*</span></label><input id="ced" inputmode="numeric" placeholder="000-0000000-0" maxlength="13" required></div>
           <div class="cf">
-            <div><label for="ctel">Teléfono</label><input id="ctel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12" required></div>
-            <div><label for="czid">Zona</label><select id="czid"></select></div>
+            <div><label for="ctel">Teléfono<span class="req" aria-hidden="true">*</span></label><input id="ctel" type="tel" inputmode="numeric" placeholder="000-000-0000" maxlength="12" required></div>
+            <div><label for="czid">Zona<span class="req" aria-hidden="true">*</span></label><select id="czid" required></select></div>
           </div>
           <label class="chk"><input type="checkbox" id="cperm"> Puede crear subcoordinadores</label>
           <p class="hint">Para entrar usará: <b>usuario</b> = su nombre completo · <b>clave</b> = su cédula sin guiones.</p>
@@ -372,7 +374,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 26-oct-2026 (26)</p>
+  <p class="ver" id="ver">Versión 26-oct-2026 (27)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -477,7 +479,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   function porConf(p){return /confirmar/i.test((p&&p.estado)||"")}
   function vfTag(p){return porConf(p)?'<br><span class="vf">⚠ A confirmar · VERIFICATE</span>':""}
   function lugar(p){return [p.recinto,p.colegio?"Colegio "+p.colegio:"",zCorta(p.recinto,p.colegio)].filter(Boolean).join(" · ")}
-  function zonaOpts(sel){sel=Number(sel)||null;return '<option value="">'+(ZONAS.length?"— Sin zona —":"Sin zonas todavía (créelas en la pestaña Zonas)")+"</option>"+ZONAS.map(function(z){return '<option value="'+z.id+'"'+(z.id===sel?" selected":"")+">"+esc(zLabel(z.id))+"</option>"}).join("")}
+  function zonaOpts(sel){sel=Number(sel)||null;return '<option value="">'+(ZONAS.length?"— Elija la zona —":"Sin zonas todavía (créelas en la pestaña Zonas)")+"</option>"+ZONAS.map(function(z){return '<option value="'+z.id+'"'+(z.id===sel?" selected":"")+">"+esc(zLabel(z.id))+"</option>"}).join("")}
   async function loadZonas(){
     try{
       var a=await sb.from("zonas").select("*");if(a.error)throw a.error;
@@ -895,7 +897,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(OPEN&&OPEN!==id){var o=$("cd-"+OPEN);if(o)o.hidden=true}
     OPEN=id;var c=COO[id];box.hidden=false;
     var js=jefesDe(id);
-    box.innerHTML='<form class="fld" data-edit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(c.nombre)+'" required></div><div><label>Cédula</label><input name="c" inputmode="numeric" maxlength="13" placeholder="000-0000000-0" value="'+esc(c.cedula||"")+'" required></div><div class="cf"><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'" required></div><div><label>Zona</label>'+(ZOK?'<select name="zid">'+zonaOpts(c.zona_id)+"</select>"+(c.zona&&!c.zona_id?'<p class="hint">Escrito antes: «'+esc(c.zona)+"»</p>":""):'<input name="z" value="'+esc(c.zona||"")+'">')+'</div></div><label class="chk"><input type="checkbox" name="pc"'+(c.puede_comites?" checked":"")+'> Puede crear subcoordinadores</label><p class="hint">Cambiar el nombre aquí no cambia su usuario de entrada.</p><button class="btn wide" type="submit">Guardar cambios</button></form>'+
+    box.innerHTML='<form class="fld" data-edit="'+id+'" autocomplete="off"><p class="hint" style="margin:0">Los campos con <span class="req" aria-hidden="true">*</span> son obligatorios.</p><div><label>Nombre<span class="req" aria-hidden="true">*</span></label><input name="n" value="'+esc(c.nombre)+'" required></div><div><label>Cédula<span class="req" aria-hidden="true">*</span></label><input name="c" inputmode="numeric" maxlength="13" placeholder="000-0000000-0" value="'+esc(c.cedula||"")+'" required></div><div class="cf"><div><label>Teléfono<span class="req" aria-hidden="true">*</span></label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'" required></div><div><label>Zona<span class="req" aria-hidden="true">*</span></label>'+(ZOK?'<select name="zid" required>'+zonaOpts(c.zona_id)+"</select>"+(c.zona&&!c.zona_id?'<p class="hint">Escrito antes: «'+esc(c.zona)+"»</p>":""):'<input name="z" value="'+esc(c.zona||"")+'">')+'</div></div><label class="chk"><input type="checkbox" name="pc"'+(c.puede_comites?" checked":"")+'> Puede crear subcoordinadores</label><p class="hint">Cambiar el nombre aquí no cambia su usuario de entrada.</p><button class="btn wide" type="submit">Guardar cambios</button></form>'+
       '<button class="btn ghost wide" style="margin-top:10px" data-rc="'+id+'">Restablecer clave a su cédula</button>'+
       '<h3 class="mh">Subcoordinadores ('+js.length+')</h3>'+(js.length?js.map(function(j){
         return '<div class="row"><div><div class="nm">'+esc(j.nombre)+(j.activo?"":" (desactivado)")+'</div><div class="sub">'+j.n+" militantes"+(j.telefono?" · "+esc(j.telefono):"")+'</div></div><button class="btn ghost" data-rc="'+j.id+'">Clave = cédula</button></div>'}).join(""):'<p class="empty">No tiene subcoordinadores.</p>')+
@@ -982,7 +984,9 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   $("ced").oninput=function(){this.value=fmtC(this.value)};
   $("ctel").oninput=function(){this.value=fmtT(this.value)};
   $("fCoo").onsubmit=async function(e){
-    e.preventDefault();if(busy)return;busy=true;$("cadd").disabled=true;$("cnew").innerHTML="";
+    e.preventDefault();if(busy)return;
+    if(ZOK&&ZONAS.length&&!Number($("czid").value)){toast("Elija la zona del coordinador");$("czid").focus();return}
+    busy=true;$("cadd").disabled=true;$("cnew").innerHTML="";
     var nom=$("cnom").value.trim().replace(/\s+/g," "),tel=$("ctel").value;
     try{
       var c=await crearCuenta(nom,$("ced").value,tel);
@@ -1283,6 +1287,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(!n){toast("Escriba el nombre");return}
     if(cd.length!==11){toast("La cédula debe tener 11 números");return}
     if(digits(f.elements.t.value).length!==10){toast("El teléfono debe tener 10 números");return}
+    if(f.elements.zid&&ZONAS.length&&!Number(f.elements.zid.value)){toast("Elija la zona del coordinador");f.elements.zid.focus();return}
     var upd={nombre:n,cedula:cd?fmtC(cd):"",telefono:f.elements.t.value,puede_comites:f.elements.pc.checked},c0=COO[id]||{};
     if(f.elements.zid){var zid=Number(f.elements.zid.value)||null;upd.zona_id=zid;upd.zona=zid?zLabel(zid):(c0.zona_id?"":c0.zona||"")}
     else upd.zona=f.elements.z.value.trim();
