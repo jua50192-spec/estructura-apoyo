@@ -268,7 +268,6 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
       <div class="seg" role="group" aria-label="Secciones">
         <button data-tab="res" aria-pressed="true">Resumen</button>
         <button data-tab="coo" aria-pressed="false">Coordinadores</button>
-        <button data-tab="zon" aria-pressed="false">Zonas</button>
         <button data-tab="pad" aria-pressed="false">Padrón</button>
         <button data-tab="aju" aria-pressed="false">Ajustes</button>
       </div>
@@ -311,20 +310,12 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
         <div id="cnew" class="fld" style="margin-top:10px"></div>
         <h2 style="margin-top:16px">Coordinadores</h2>
         <div id="clist"></div>
-      </div>
-
-      <div id="tZon" hidden>
-        <h2>Zonas</h2>
-        <p class="hint" style="margin:0 0 10px">Cada zona tiene sus colegios. Cada coordinador (y sus subcoordinadores) busca por nombre solo en los colegios de su zona; con la cédula completa encuentra en todas. Si un coordinador no tiene zona, ve todo el padrón.</p>
-        <div id="zstat"></div>
-        <form id="fZon" class="fld" autocomplete="off" style="margin-top:12px">
-          <div class="cf">
-            <div><label for="znum">Zona</label><input id="znum" maxlength="4" autocapitalize="characters" autocomplete="off" placeholder="Ej. B-2" required></div>
-            <div><label for="znom">Nombre (barrio o sector)</label><input id="znom" maxlength="60"></div>
-          </div>
-          <button class="btn wide" id="zgo" type="submit">Crear zona</button>
-        </form>
-        <div id="zlist" style="margin-top:12px"></div>
+        <details class="fold big" id="fZonas" style="margin-top:16px">
+          <summary><span>Zonas</span><span class="fcnt" id="zcnt">…</span></summary>
+          <p class="hint" style="margin:4px 0 10px">Cada zona tiene sus colegios. Cada coordinador (y sus subcoordinadores) busca por nombre solo en los colegios de su zona; con la cédula completa encuentra en todas. Si un coordinador no tiene zona, ve todo el padrón. Toque una zona para ver o corregir sus colegios.</p>
+          <div id="zstat"><p class="empty">Cargando…</p></div>
+          <div id="zlist" style="margin-top:12px"></div>
+        </details>
       </div>
 
       <div id="tPad" hidden>
@@ -381,7 +372,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 26-oct-2026 (25)</p>
+  <p class="ver" id="ver">Versión 26-oct-2026 (26)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -822,9 +813,10 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
 
   /* ---------- administrador ---------- */
   function tab(t){
-    ["res","coo","zon","pad","aju"].forEach(function(k){var id={res:"tRes",coo:"tCoo",zon:"tZon",pad:"tPad",aju:"tAju"}[k];$(id).hidden=k!==t});
+    ["res","coo","pad","aju"].forEach(function(k){var id={res:"tRes",coo:"tCoo",pad:"tPad",aju:"tAju"}[k];$(id).hidden=k!==t});
     document.querySelectorAll("[data-tab]").forEach(function(b){b.setAttribute("aria-pressed",b.getAttribute("data-tab")===t)});
-    if(t==="res"||t==="coo")loadRes();if(t==="res")loadHist();if(t==="pad")loadPadCount();if(t==="zon")loadZonTab();if(t==="aju")drawAju();
+    if(t==="res"||t==="coo"){var lr=loadRes();if(t==="coo")lr.then(function(){if($("fZonas").open)loadZonTab()})}   /* primero los coordinadores, después las zonas */
+    if(t==="res")loadHist();if(t==="pad")loadPadCount();if(t==="aju")drawAju();
   }
   /* ---------- tablero: coordinadores → (subcoordinadores) → militantes ---------- */
   var META=0;
@@ -877,6 +869,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     JEF={};(d.jefes||[]).forEach(function(j){JEF[j.id]=j});
     if(ZOK){var rz=await sb.from("perfiles").select("id,zona_id");(rz.data||[]).forEach(function(x){if(COO[x.id])COO[x.id].zona_id=x.zona_id;if(JEF[x.id])JEF[x.id].zona_id=x.zona_id})}
     $("czid").innerHTML=zonaOpts($("czid").value);
+    $("zcnt").textContent=ZOK?ZONAS.length:"—";
     drawZres();
     META=Number(d.meta||0);
     renderDash();
@@ -951,14 +944,13 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
         var libres=g.cols.filter(function(c){return !c.zona_id}).length;
         return '<details class="zrd" data-zq="'+esc((g.num+" "+g.nombre).toLowerCase())+'"><summary>'+esc(g.num+" "+g.nombre)+' <span class="sub">· '+g.cols.length+" colegio"+(g.cols.length===1?"":"s")+(libres?" · "+libres+" sin zona":"")+"</span></summary>"+grid(g)+"</details>"}).join(""):'<p class="empty">'+(COLS.length?"No hay más recintos.":"Todavía no hay colegios.")+"</p>")+
       '<p class="sub" style="margin-top:10px">'+(x.coords.length?"Coordinadores: "+esc(x.coords.map(function(c){return c.nombre+(c.activo?"":" (desactivado)")}).join(", ")):"Sin coordinadores. Asígnelos en Coordinadores → Ver / editar.")+"</p>"+
-      '<button class="btn wide" type="submit">Guardar zona</button></form><button class="btn ghost wide" style="margin-top:8px" data-zdel="'+z.id+'">Borrar esta zona</button>'}
+      '<button class="btn wide" type="submit">Guardar zona</button></form>'}
   function abrirZona(d){var id=+d.getAttribute("data-zid"),b=d.querySelector(".dcb");if(b&&!b.getAttribute("data-on")&&ZROWS[id]){b.innerHTML=zonaBody(ZROWS[id]);b.setAttribute("data-on","1")}}
   async function loadZonTab(){
     var st=$("zstat"),zl=$("zlist");
     await loadZonas();
-    if(!ZOK){st.innerHTML='<div class="note bad">Falta pegar en Supabase el archivo zonas.sql. Mientras tanto, lo demás de la app funciona igual.</div>';zl.innerHTML="";$("fZon").hidden=true;return}
-    if(!ZCOK){st.innerHTML='<div class="note bad">Falta pegar en Supabase el archivo zonas-colegios.sql (versión 22). Mientras tanto, lo demás de la app funciona igual.</div>';zl.innerHTML="";$("fZon").hidden=true;return}
-    $("fZon").hidden=false;
+    if(!ZOK){st.innerHTML='<div class="note bad">Falta pegar en Supabase el archivo zonas.sql. Mientras tanto, lo demás de la app funciona igual.</div>';zl.innerHTML="";return}
+    if(!ZCOK){st.innerHTML='<div class="note bad">Falta pegar en Supabase el archivo zonas-colegios.sql (versión 22). Mientras tanto, lo demás de la app funciona igual.</div>';zl.innerHTML="";return}
     if(!Object.keys(COO).length)await loadRes();
     var rr=await sb.rpc("colegios_conocidos");COLS=rr.error?[]:rr.data||[];
     var d=await zonaFilas();
@@ -976,13 +968,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   document.addEventListener("input",function(e){var f=e.target;if(!f.getAttribute||!f.getAttribute("data-zf"))return;
     var q=f.value.trim().toLowerCase(),form=f.closest("form");
     form.querySelectorAll("details.zrd").forEach(function(d){d.hidden=!!q&&d.getAttribute("data-zq").indexOf(q)<0})});
-  $("fZon").onsubmit=async function(e){
-    e.preventDefault();var num=zCod($("znum").value);if(!num){toast(ZERR);return}
-    $("zgo").disabled=true;
-    var r=await sb.from("zonas").insert({numero:num,nombre:$("znom").value.trim()}).select("id").single();
-    $("zgo").disabled=false;
-    if(r.error){toast(zMsg(r.error,num));return}
-    $("fZon").reset();ZOPEN=r.data.id;toast("Zona "+num+" creada. Ahora marque sus colegios.");loadZonTab()};
+  document.addEventListener("toggle",function(e){if(e.target.id==="fZonas"&&e.target.open)loadZonTab()},true);
   async function borrarZona(id){
     var z=zonaPor(id);if(!z)return;
     if(!confirm("¿Borrar la "+zLabel(id)+"?\n\nSus colegios quedan sin zona y sus coordinadores quedan sin zona (verán todo el padrón). No se borra ningún militante."))return;
