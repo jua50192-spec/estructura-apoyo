@@ -374,7 +374,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 29-oct-2026 (28)</p>
+  <p class="ver" id="ver">Versión 29-oct-2026 (29)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -517,10 +517,13 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     o.innerHTML='<img src="'+esc(c.url)+'" alt=""><span>Toque para cerrar</span>';
     o.onclick=function(){o.remove()};document.body.appendChild(o)}
   function showAviso(nm){var a=$("avis");
-    a.innerHTML="<b>⚠ "+esc(nm)+" está «A confirmar».</b><br>"+VFTXT+'<br><button class="btn ghost" style="margin-top:8px" data-avx="1">Entendido</button>';
+    a.innerHTML="<b>⚠ "+esc(nv(nm))+" está «A confirmar».</b><br>"+VFTXT+'<br><button class="btn ghost" style="margin-top:8px" data-avx="1">Entendido</button>';
     a.hidden=false;a.scrollIntoView({behavior:"smooth",block:"center"})}
 
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+  /* El padrón trae «APELLIDOS, NOMBRES»: se muestra «NOMBRES APELLIDOS» (versión 29) */
+  function nv(n){n=String(n||"").replace(/\s+/g," ").trim();var i=n.indexOf(",");if(i<0)return n;
+    var a=n.slice(0,i).trim(),b=n.slice(i+1).replace(/,/g," ").trim();return (b?b+" "+a:a).replace(/\s+/g," ")}
   function toast(t){var e=$("toast");e.textContent=t;e.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(function(){e.hidden=true},2800)}
   function fmtT(v){var d=String(v).replace(/\D/g,"").slice(0,10);return d.length>6?d.slice(0,3)+"-"+d.slice(3,6)+"-"+d.slice(6):d.length>3?d.slice(0,3)+"-"+d.slice(3):d}
   function fmtCel(t){t=String(t||"").replace(/\D/g,"");return t.length===10?t.slice(0,3)+"-"+t.slice(3,6)+"-"+t.slice(6):t}
@@ -560,7 +563,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
 
   /* ---------- Informe PDF ----------
      Cada grupo: {tipo, padre, nombre, cedula, telefono, recinto, colegio, fecha, mil:[{nombre,cedula,celular,recinto,colegio,creado}]} */
-  function mRow(p,creado){return {nombre:p.nombre||"",cedula:cv(p.cedula),celular:p.celular||"",recinto:p.recinto||"",colegio:p.colegio||"",estado:p.estado||"",creado:creado}}
+  function mRow(p,creado){return {nombre:nv(p.nombre)||"",cedula:cv(p.cedula),celular:p.celular||"",recinto:p.recinto||"",colegio:p.colegio||"",estado:p.estado||"",creado:creado}}
   function boxHtml(g){
     var f=function(l,v){return "<div><span>"+l+"</span><b>"+esc(v||"—")+"</b></div>"};
     return '<div class="rbox'+(g.tipo==="Subcoordinador"?" sub":"")+'"><div class="rtag">'+esc(g.tipo)+(g.padre?" · equipo de "+esc(g.padre):"")+'</div><div class="rname">'+esc(g.nombre)+'</div><div class="rgrid">'+
@@ -714,7 +717,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var puedeSub=ME.rol==="coordinador"&&!!ME.puede_comites;
     $("mine").innerHTML=a.length?a.map(function(p){
       var tel=p.celular?'<a href="tel:'+esc(p.celular)+'">'+esc(fmtCel(p.celular))+"</a>":'<span style="color:var(--bad)">Sin teléfono</span>';
-      return '<div class="cw"><div class="row"><div class="pr">'+foto(p.id)+'<div><div class="nm">'+esc(p.nombre)+(p.apodo?' <span class="sub">('+esc(p.apodo)+")</span>":"")+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula||"Sin cédula")+" · "+tel+vfTag(p)+'</div></div></div><div class="acts"><button class="btn ghost" data-ed="'+p.id+'">Editar</button><button class="btn ghost" data-del="'+p.id+'">Quitar</button>'+(puedeSub?'<button class="btn ghost" data-hsub="'+p.id+'">Hacer subcoordinador</button>':"")+'</div></div><div class="medit" id="me-'+p.id+'" hidden></div></div>'}).join(""):'<p class="empty">Todavía no ha añadido militantes.</p>';
+      return '<div class="cw"><div class="row"><div class="pr">'+foto(p.id)+'<div><div class="nm">'+esc(nv(p.nombre))+(p.apodo?' <span class="sub">('+esc(p.apodo)+")</span>":"")+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula||"Sin cédula")+" · "+tel+vfTag(p)+'</div></div></div><div class="acts"><button class="btn ghost" data-ed="'+p.id+'">Editar</button><button class="btn ghost" data-del="'+p.id+'">Quitar</button>'+(puedeSub?'<button class="btn ghost" data-hsub="'+p.id+'">Hacer subcoordinador</button>':"")+'</div></div><div class="medit" id="me-'+p.id+'" hidden></div></div>'}).join(""):'<p class="empty">Todavía no ha añadido militantes.</p>';
     cargarFotos($("mine"));
   }
   function mineById(id){return MINE.filter(function(p){return String(p.id)===String(id)})[0]}
@@ -723,9 +726,9 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   function hacerSub(id){
     var p=mineById(id);if(!p||$("cSub").hidden)return;
     var cd=digits(p.cedula);
-    if(cd.length===11&&SUBS.some(function(s){return digits(s.cedula)===cd})){toast(p.nombre+" ya es subcoordinador");return}
+    if(cd.length===11&&SUBS.some(function(s){return digits(s.cedula)===cd})){toast(nv(p.nombre)+" ya es subcoordinador");return}
     $("snew").innerHTML="";$("fSub").reset();$("fSub").hidden=false;
-    $("snom").value=String(p.nombre||"").trim().replace(/\s+/g," ");
+    $("snom").value=nv(p.nombre).replace(/\s+/g," ");
     $("sced").value=cd.length===11?fmtC(cd):"";
     $("stel").value=digits(p.celular).length===10?fmtT(p.celular):"";
     $("cSub").scrollIntoView({behavior:"smooth",block:"start"});
@@ -778,7 +781,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var r=await sb.rpc("militantes_de",{p_coord:id}),ml=$("sm-"+id);if(!ml)return;
     if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     ml.innerHTML=(r.data||[]).map(function(p){
-      return '<div class="row"><div class="pr">'+foto(p.id)+'<div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula)+(p.celular?" · "+esc(fmtCel(p.celular)):"")+vfTag(p)+'</div></div></div><button class="btn ghost" data-sq="'+p.id+'" data-sc="'+id+'" data-nm="'+esc(p.nombre)+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
+      return '<div class="row"><div class="pr">'+foto(p.id)+'<div><div class="nm">'+esc(nv(p.nombre))+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula)+(p.celular?" · "+esc(fmtCel(p.celular)):"")+vfTag(p)+'</div></div></div><button class="btn ghost" data-sq="'+p.id+'" data-sc="'+id+'" data-nm="'+esc(nv(p.nombre))+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
     cargarFotos(ml);
   }
   function jefeArgs(s,over){return Object.assign({p_id:s.id,p_nombre:s.nombre,p_zona:s.zona||"",p_telefono:s.telefono||"",p_activo:s.activo,p_cedula:s.cedula||"",p_cargo:s.cargo||"",p_provincia:s.provincia||"",p_municipio:s.municipio||"",p_recinto:s.recinto||""},over||{})}
@@ -810,7 +813,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var a=r.data||[];SRES={};a.forEach(function(p){SRES[p.id]=p});
     $("res").innerHTML=a.length?a.map(function(p){
       var b;if(p.mio)b='<span class="pill ok">Ya es suyo</span>';else if(p.tomado_por)b='<span class="pill no">Lo tiene '+esc(p.tomado_por)+"</span>";else b='<button class="btn" data-add="'+p.id+'">Añadir</button>';
-      return '<div class="row"><div class="pr">'+foto(p.id)+'<div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula)+vfTag(p)+"</div></div></div>"+b+"</div>"}).join(""):'<p class="empty">No aparece en el padrón.</p>';
+      return '<div class="row"><div class="pr">'+foto(p.id)+'<div><div class="nm">'+esc(nv(p.nombre))+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(p.cedula)+vfTag(p)+"</div></div></div>"+b+"</div>"}).join(""):'<p class="empty">No aparece en el padrón.</p>';
     cargarFotos($("res"));
   }
   $("q").oninput=function(){clearTimeout(sT);sT=setTimeout(doSearch,350)};
@@ -827,12 +830,12 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   function dcHtml(p,esJ){
     var nj=esJ?0:jefesDe(p.id).length,meta=Number(p.meta||META||0),n=Number(p.n||0);
     var info=[esJ?"Subcoordinador":(p.zona||""),nj?nj+" subcoord.":"",esJ?"":(p.propios!=null&&nj?p.propios+" propios":""),p.activo?"":"Desactivado"].filter(Boolean).join(" · ");
-    return '<details class="dc'+(p.activo?"":" off")+'" data-cid="'+p.id+'" data-q="'+esc(String(p.nombre||"").toLowerCase())+'"><summary><div class="dn"><div class="nm">'+esc(p.nombre)+'</div>'+(info?'<div class="sub">'+esc(info)+"</div>":"")+
+    return '<details class="dc'+(p.activo?"":" off")+'" data-cid="'+p.id+'" data-q="'+esc(String(p.nombre||"").toLowerCase())+'"><summary><div class="dn"><div class="nm">'+esc(nv(p.nombre))+'</div>'+(info?'<div class="sub">'+esc(info)+"</div>":"")+
       (meta>0?'<div class="mbar" title="Meta: '+meta+'"><i style="width:'+Math.min(100,n/meta*100)+'%"></i></div><div class="sub">'+n+" de "+meta+" (meta)</div>":"")+
       '</div><span class="cnt">'+n+'</span></summary><div class="dcb" id="db-'+p.id+'"><p class="empty">Cargando…</p></div></details>'}
   function miHtml(p,creado,pid){
     var tel=p.celular?'<a href="tel:'+esc(digits(p.celular))+'">'+esc(fmtCel(p.celular))+"</a>":'<span style="color:var(--bad)">Sin teléfono</span>';
-    return '<div class="mi"><div class="pr">'+foto(pid)+'<div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(cv(p.cedula)||"Sin cédula")+" · "+tel+"<br>"+esc([lugar(p),fecha(creado)].filter(Boolean).join(" · "))+vfTag(p)+"</div></div></div></div>"}
+    return '<div class="mi"><div class="pr">'+foto(pid)+'<div><div class="nm">'+esc(nv(p.nombre))+'</div><div class="sub">'+esc(cv(p.cedula)||"Sin cédula")+" · "+tel+"<br>"+esc([lugar(p),fecha(creado)].filter(Boolean).join(" · "))+vfTag(p)+"</div></div></div></div>"}
   function renderDash(){
     var open=[].map.call(document.querySelectorAll("#dash details[open]"),function(d){return d.getAttribute("data-cid")});
     var co=Object.keys(COO).map(function(k){return COO[k]}).sort(function(a,b){return (b.activo-a.activo)||(b.n-a.n)||a.nombre.localeCompare(b.nombre)});
@@ -868,7 +871,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     $("aS").textContent=d.seguidores;$("aC").textContent=act;
     $("aP").textContent="Personas en el padrón: "+d.padron+(d.padron?" · Cubierto: "+(d.seguidores/d.padron*100).toFixed(1)+"%":"");
     $("last").innerHTML=(d.ultimos||[]).map(function(x){
-      return '<div class="row"><div><div class="nm">'+esc(x.nombre)+'</div><div class="sub">'+esc(x.coord)+" · "+hace(x.creado)+"</div></div></div>"}).join("")||'<p class="empty">Sin registros.</p>';
+      return '<div class="row"><div><div class="nm">'+esc(nv(x.nombre))+'</div><div class="sub">'+esc(x.coord)+" · "+hace(x.creado)+"</div></div></div>"}).join("")||'<p class="empty">Sin registros.</p>';
     COO={};co.forEach(function(c){COO[c.id]=c});
     JEF={};(d.jefes||[]).forEach(function(j){JEF[j.id]=j});
     if(ZOK){var rz=await sb.from("perfiles").select("id,zona_id");(rz.data||[]).forEach(function(x){if(COO[x.id])COO[x.id].zona_id=x.zona_id;if(JEF[x.id])JEF[x.id].zona_id=x.zona_id})}
@@ -890,7 +893,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var a=r.data||[];
     box.innerHTML=a.length?a.map(function(h){
       var add=h.accion==="Añadió";
-      return '<div class="row"><div><div class="nm"><span class="hacc '+(add?"add":"del")+'">'+(add?"Añadido":"Quitado")+"</span> · "+esc(h.persona||"(persona borrada)")+'</div><div class="sub">'+(add?"A la lista de ":"De la lista de ")+esc(h.coord||"—")+" · hecho por "+esc(h.hecho_por_nombre||"—")+" · "+hace(h.cuando)+"</div></div></div>"}).join(""):'<p class="empty">Todavía no hay cambios registrados. Se anotan desde que se instala el historial.</p>';
+      return '<div class="row"><div><div class="nm"><span class="hacc '+(add?"add":"del")+'">'+(add?"Añadido":"Quitado")+"</span> · "+esc(nv(h.persona)||"(persona borrada)")+'</div><div class="sub">'+(add?"A la lista de ":"De la lista de ")+esc(h.coord||"—")+" · hecho por "+esc(h.hecho_por_nombre||"—")+" · "+hace(h.cuando)+"</div></div></div>"}).join(""):'<p class="empty">Todavía no hay cambios registrados. Se anotan desde que se instala el historial.</p>';
   }
   var COO={},JEF={},OPEN=null;
   async function openDet(id,keep){
@@ -908,7 +911,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var ml=$("ml-"+id);if(!ml)return;
     if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     ml.innerHTML=(r.data||[]).map(function(x){var p=x.padron||{};
-      return '<div class="row"><div class="pr">'+foto(x.padron_id)+'<div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(cv(p.cedula)||"Sin cédula")+(p.celular?" · "+esc(fmtCel(p.celular)):"")+vfTag(p)+'</div></div></div><button class="btn ghost" data-aq="'+x.padron_id+'" data-co="'+id+'" data-nm="'+esc(p.nombre)+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
+      return '<div class="row"><div class="pr">'+foto(x.padron_id)+'<div><div class="nm">'+esc(nv(p.nombre))+'</div><div class="sub">'+esc(lugar(p))+"<br>"+esc(cv(p.cedula)||"Sin cédula")+(p.celular?" · "+esc(fmtCel(p.celular)):"")+vfTag(p)+'</div></div></div><button class="btn ghost" data-aq="'+x.padron_id+'" data-co="'+id+'" data-nm="'+esc(nv(p.nombre))+'">Quitar</button></div>'}).join("")||'<p class="empty">Todavía no ha inscrito militantes.</p>';
     cargarFotos(ml);
   }
   /* ---- zonas ---- */
@@ -1244,7 +1247,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       if(r.error)toast(errMsg(r.error));else if(r.data==="ok"){toast("Añadido");if(porConf(sp))showAviso(sp.nombre)}else if(r.data==="ya_tomado")toast("Esa persona ya la tiene otro coordinador");
       loadMine();doSearch();return}
     if(g("data-del")){var pm=mineById(g("data-del"));
-      if(!confirm("¿Quitar a "+(pm?pm.nombre:"esta persona")+" de su lista?\n\nPodrá volver a añadirla después si hace falta."))return;
+      if(!confirm("¿Quitar a "+(pm?nv(pm.nombre):"esta persona")+" de su lista?\n\nPodrá volver a añadirla después si hace falta."))return;
       var r2=await sb.rpc("quitar_seguidor",{p_id:+g("data-del")});if(r2.error)toast(errMsg(r2.error));else toast("Quitado de su lista");loadMine();doSearch()}
   });
   document.addEventListener("input",function(e){var z=e.target;if(z.id==="znum"||(z.name==="num"&&z.closest&&z.closest("[data-zedit]"))){z.value=zFmt(z.value);return}});
