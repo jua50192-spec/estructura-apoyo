@@ -314,7 +314,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
         <div id="clist"></div>
         <details class="fold big" id="fZonas" style="margin-top:16px">
           <summary><span>Zonas</span><span class="fcnt" id="zcnt">…</span></summary>
-          <p class="hint" style="margin:4px 0 10px">Cada zona tiene sus colegios. Cada coordinador (y sus subcoordinadores) busca por nombre solo en los colegios de su zona; con la cédula completa encuentra en todas. Si un coordinador no tiene zona, ve todo el padrón. Toque una zona para ver o corregir sus colegios.</p>
+          <p class="hint" style="margin:4px 0 10px">Cada zona tiene sus colegios. Cada coordinador (y sus subcoordinadores) busca por nombre en los colegios de su zona y en los colegios libres (los que no tienen zona); con la cédula completa encuentra en todas. Cuando usted le asigna zona a un colegio libre, deja de ser libre. Si un coordinador no tiene zona, ve todo el padrón. Toque una zona para ver o corregir sus colegios.</p>
           <div id="zstat"><p class="empty">Cargando…</p></div>
           <div id="zlist" style="margin-top:12px"></div>
         </details>
@@ -374,7 +374,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 26-oct-2026 (27)</p>
+  <p class="ver" id="ver">Versión 29-oct-2026 (28)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -478,7 +478,9 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   function zCorta(rec,col){var z=zDeCol(rec,col);return z?"Zona "+z.numero:""}
   function porConf(p){return /confirmar/i.test((p&&p.estado)||"")}
   function vfTag(p){return porConf(p)?'<br><span class="vf">⚠ A confirmar · VERIFICATE</span>':""}
-  function lugar(p){return [p.recinto,p.colegio?"Colegio "+p.colegio:"",zCorta(p.recinto,p.colegio)].filter(Boolean).join(" · ")}
+  /* Zona del colegio, o «Libre» si es del padrón y no está en ninguna zona (versión 28) */
+  function zLugar(rec,col){var z=zCorta(rec,col);if(z)return z;return ZCOK&&col&&/^\d{5}$/.test(rNum(rec))?"Libre (sin zona)":""}
+  function lugar(p){return [p.recinto,p.colegio?"Colegio "+p.colegio:"",zLugar(p.recinto,p.colegio)].filter(Boolean).join(" · ")}
   function zonaOpts(sel){sel=Number(sel)||null;return '<option value="">'+(ZONAS.length?"— Elija la zona —":"Sin zonas todavía (créelas en la pestaña Zonas)")+"</option>"+ZONAS.map(function(z){return '<option value="'+z.id+'"'+(z.id===sel?" selected":"")+">"+esc(zLabel(z.id))+"</option>"}).join("")}
   async function loadZonas(){
     try{
@@ -566,7 +568,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   function tabHtml(mil){
     if(!mil.length)return '<p class="rnone">Sin militantes inscritos.</p>';
     return '<table class="rtab"><thead><tr><th>#</th><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Recinto</th><th>Colegio</th><th>Fecha de registro</th></tr></thead><tbody>'+
-      mil.map(function(m,i){return '<tr><td class="n">'+(i+1)+"</td><td>"+esc(m.nombre)+(porConf(m)?'<br><b style="color:#8a5a00">⚠ A confirmar – VERIFICATE</b>':"")+'</td><td class="nw">'+esc(m.cedula||"—")+'</td><td class="nw">'+esc(fmtCel(m.celular)||"—")+"</td><td>"+esc(m.recinto||"—")+(zCorta(m.recinto,m.colegio)?" · "+esc(zCorta(m.recinto,m.colegio)):"")+'</td><td class="nw">'+esc(m.colegio||"—")+'</td><td class="nw">'+fecha(m.creado)+"</td></tr>"}).join("")+"</tbody></table>"}
+      mil.map(function(m,i){return '<tr><td class="n">'+(i+1)+"</td><td>"+esc(m.nombre)+(porConf(m)?'<br><b style="color:#8a5a00">⚠ A confirmar – VERIFICATE</b>':"")+'</td><td class="nw">'+esc(m.cedula||"—")+'</td><td class="nw">'+esc(fmtCel(m.celular)||"—")+"</td><td>"+esc(m.recinto||"—")+(zLugar(m.recinto,m.colegio)?" · "+esc(zLugar(m.recinto,m.colegio)):"")+'</td><td class="nw">'+esc(m.colegio||"—")+'</td><td class="nw">'+fecha(m.creado)+"</td></tr>"}).join("")+"</tbody></table>"}
   function reportHtml(titulo,gs){
     var tot=gs.reduce(function(a,g){return a+g.mil.length},0),now=new Date();
     var nC=gs.filter(function(g){return g.tipo==="Coordinador"}).length,nS=gs.length-nC;
@@ -703,7 +705,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   async function showMiZona(){
     var e=$("czona");e.hidden=true;MIZONA=null;if(!ZOK)return;
     try{var r=await sb.rpc("mi_zona");if(!r.error)MIZONA=r.data}catch(x){}
-    if(MIZONA&&zonaPor(MIZONA)){e.textContent="Busca en su zona: "+zLabel(MIZONA)+". Con la cédula completa (11 números) encuentra también a personas de otras zonas.";e.hidden=false}}
+    if(MIZONA&&zonaPor(MIZONA)){e.textContent="Busca en su zona: "+zLabel(MIZONA)+", y en los colegios libres (sin zona). Con la cédula completa (11 números) encuentra también a personas de otras zonas.";e.hidden=false}}
   async function loadMine(){
     var r=await sb.rpc("mis_seguidores");
     if(r.error){$("mine").innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
@@ -958,7 +960,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var d=await zonaFilas();
     var sinZ=COLS.filter(function(c){return !c.zona_id&&Number(c.personas)>0}),sinC=d.rows.filter(function(x){return !x.act}).length,sinR=d.rows.filter(function(x){return !x.ncol}).length;
     st.innerHTML='<div class="note'+(sinZ.length||sinC||sinR||!ZONAS.length?"":" ok")+'">'+ZONAS.length+" zona"+(ZONAS.length===1?"":"s")+" · "+Object.keys(ZCOL).length+" colegios con zona"+
-      (sinZ.length?"<br>⚠ "+sinZ.length+" colegio"+(sinZ.length>1?"s":"")+" del padrón sin zona: "+esc(sinZ.slice(0,12).map(function(c){return c.recinto_num+"/"+c.colegio}).join(", "))+(sinZ.length>12?"…":""):"")+
+      (sinZ.length?"<br>⚠ "+sinZ.length+" colegio"+(sinZ.length>1?"s":"")+" del padrón sin zona (libres: todos los coordinadores los pueden buscar): "+esc(sinZ.slice(0,12).map(function(c){return c.recinto_num+"/"+c.colegio}).join(", "))+(sinZ.length>12?"…":""):"")+
       (sinR?"<br>⚠ "+sinR+" zona"+(sinR>1?"s":"")+" sin colegios (sus coordinadores no encuentran a nadie por nombre)":"")+
       (sinC?"<br>⚠ "+sinC+" zona"+(sinC>1?"s":"")+" sin coordinador activo":"")+(ZONAS.length&&!sinZ.length&&!sinC&&!sinR?"<br>Todo asignado.":"")+"</div>";
     ZROWS={};d.rows.forEach(function(x){ZROWS[x.z.id]=x});
