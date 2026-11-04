@@ -289,10 +289,11 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
         <button id="rfs" class="btn ghost wide" style="margin-top:12px">↻ Actualizar</button>
         <details class="fold big" id="fCoo2">
           <summary><span>Coordinadores</span><span class="fcnt" id="dcount">0</span></summary>
-          <p class="hint" style="margin:4px 0 8px">Toque un nombre para ver sus militantes.</p>
+          <button id="axl" class="btn wide" style="margin:4px 0 6px">Imprimir todo junto (PDF)</button>
+          <p class="hint" style="margin:0 0 12px">Todos los coordinadores y subcoordinadores, cada uno en su hoja. Con muchas personas, mejor desde una computadora.</p>
+          <p class="hint" style="margin:4px 0 8px">Toque un nombre para ver sus militantes y sacar su informe.</p>
           <input id="dq" type="search" placeholder="Buscar coordinador…" autocomplete="off">
           <div id="dash" style="margin-top:8px"></div>
-          <button id="axl" class="btn wide" style="margin:4px 0 12px">Informe completo en PDF</button>
         </details>
         <details class="fold" id="fZres"><summary>Por zona</summary><div id="zres"><p class="empty">Cargando…</p></div></details>
         <details class="fold"><summary>Últimos registros</summary><div id="last"></div></details>
@@ -381,7 +382,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 03-nov-2026 (31)</p>
+  <p class="ver" id="ver">Versión 04-nov-2026 (32)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -628,9 +629,17 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     return out}
   function jefesDe(cid){return Object.keys(JEF).map(function(k){return JEF[k]}).filter(function(j){return j.padre_id===cid})}
   /* Informe del administrador: un coordinador (con sus subcoordinadores) o todos */
-  function reportAdmin(btn,coord){withBusy(btn,async function(){
-    var coords=coord?[COO[coord]]:Object.keys(COO).map(function(k){return COO[k]}).sort(function(a,b){return a.nombre.localeCompare(b.nombre)});
-    var people=[];coords.forEach(function(c){people.push(c);jefesDe(c.id).forEach(function(j){people.push(j)})});
+  /* Informe del administrador.
+     modo "todo": todos los coordinadores con sus subcoordinadores (id = null)
+     modo "equipo": un coordinador con sus subcoordinadores
+     modo "solo": una sola persona (coordinador o subcoordinador), solo sus militantes propios */
+  function reportAdmin(btn,coord,modo){withBusy(btn,async function(){
+    modo=modo||(coord?"equipo":"todo");
+    var people=[];
+    if(modo==="solo"){var una=COO[coord]||JEF[coord];if(una)people.push(una)}
+    else{
+      var coords=coord?[COO[coord]]:Object.keys(COO).map(function(k){return COO[k]}).sort(function(a,b){return a.nombre.localeCompare(b.nombre)});
+      coords.forEach(function(c){if(!c)return;people.push(c);jefesDe(c.id).forEach(function(j){people.push(j)})})}
     if(!people.length){toast("No hay coordinadores");return}
     var ids=people.map(function(p){return p.id});
     var list=await fetchSeg(ids),by={};
@@ -641,7 +650,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var gs=people.map(function(p){var esJ=!!JEF[p.id],info=pd[digits(p.cedula)]||{};
       return {tipo:esJ?"Subcoordinador":"Coordinador",padre:esJ&&COO[p.padre_id]?COO[p.padre_id].nombre:"",nombre:p.nombre,cedula:p.cedula,telefono:p.telefono,recinto:info.recinto||p.recinto||"",colegio:info.colegio||"",fecha:cr[p.id],
         zona:zLabel(p.zona_id||(esJ&&COO[p.padre_id]?COO[p.padre_id].zona_id:null))||p.zona||"",mil:by[p.id]||[]}});
-    printReport(coord?"Informe de "+COO[coord].nombre:"Informe completo de militantes",gs)})}
+    var quien=coord?(COO[coord]||JEF[coord]||{}).nombre:"";
+    printReport(modo==="todo"?"Informe completo de militantes":modo==="solo"?"Informe de "+quien:"Informe de "+quien+" y su equipo",gs)})}
 
   function drawHead(){
     $("hname").textContent=CONF.candidato||"Nombre del candidato";
@@ -881,7 +891,9 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(r.error){box.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     var a=r.data||[],js=esJ?[]:jefesDe(id);
     a.forEach(function(x){DM[x.padron_id]=x.padron||{}});
-    box.innerHTML=(esJ?"":'<div class="dact"><button class="btn" data-pdf="'+id+'">Informe PDF</button><button class="btn ghost" data-goc="'+id+'">Editar coordinador</button></div>')+
+    var nj=esJ?0:jefesDe(id).length;
+    box.innerHTML=(esJ?'<div class="dact"><button class="btn" data-pdf="'+id+'" data-modo="solo">Informe PDF</button></div>'
+      :'<div class="dact"><button class="btn" data-pdf="'+id+'" data-modo="solo">PDF solo él</button>'+(nj?'<button class="btn" data-pdf="'+id+'" data-modo="equipo">PDF con su equipo</button>':"")+'</div><div class="dact"><button class="btn ghost" data-goc="'+id+'">Editar coordinador</button></div>')+
       (js.length?'<h3 class="mh">Subcoordinadores ('+js.length+")</h3>"+js.map(function(j){return dcHtml(j,true)}).join(""):"")+
       '<h3 class="mh">'+(js.length?"Militantes propios":"Militantes")+" ("+a.length+")</h3>"+
       (a.length?a.map(function(x){return miHtml(x.padron||{},x.creado,x.padron_id,id)}).join(""):'<p class="empty">Todavía no ha inscrito militantes.</p>');
@@ -1247,7 +1259,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var t=e.target,g=function(a){return t.getAttribute&&t.getAttribute(a)};
     if(g("data-tab")){tab(g("data-tab"));return}
     if(g("data-ver")){openDet(g("data-ver"));return}
-    if(g("data-pdf")){reportAdmin(t,g("data-pdf"));return}
+    if(g("data-pdf")){reportAdmin(t,g("data-pdf"),g("data-modo"));return}
     if(g("data-goc")){var gid=g("data-goc");OPEN=gid;tab("coo");
       setTimeout(function(){var el=$("cd-"+gid);if(el)el.scrollIntoView({behavior:"smooth",block:"start"})},900);return}
     if(g("data-ed")){openEdit(g("data-ed"));return}
