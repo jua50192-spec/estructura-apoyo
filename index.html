@@ -216,6 +216,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
       <div><label for="lu">Usuario</label><input id="lu" placeholder="Su nombre completo" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></div>
       <div><label for="lp">Clave</label><input id="lp" type="password" autocomplete="current-password" required></div>
       <button class="btn wide" id="lgo" type="submit">Entrar</button>
+      <p class="hint" style="margin:0">Usuario: su nombre completo. Clave: su cédula (con o sin guiones), o la clave que usted puso.</p>
     </form>
     <div id="lerr" class="note bad" hidden></div>
   </section>
@@ -251,7 +252,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
       </div>
       <div>
         <h2>Mis militantes</h2><div id="mine"></div>
-        <button id="cxl" class="btn wide" style="margin-top:10px">Descargar informe en PDF</button>
+        <div class="dact" style="margin-top:10px"><button id="cxl" class="btn">Informe PDF de mis militantes</button><button id="cxe" class="btn" hidden>Informe PDF con mi equipo</button></div>
       </div>
       <div id="cSub" hidden>
         <h2>Mis subcoordinadores</h2>
@@ -286,11 +287,10 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
           <div class="t"><b id="aC">0</b><span>Coordinadores activos</span></div>
         </div>
         <p class="sub" id="aP" style="margin:10px 0 0"></p>
-        <button id="rfs" class="btn ghost wide" style="margin-top:12px">↻ Actualizar</button>
+        <div class="dact" style="margin-top:12px"><button id="rfs" class="btn ghost">↻ Actualizar</button><button id="axl" class="btn">Imprimir todo junto (PDF)</button></div>
+        <p class="hint" style="margin:0">«Imprimir todo junto» saca a todos los coordinadores y subcoordinadores, cada uno en su hoja. Con muchas personas, mejor desde una computadora.</p>
         <details class="fold big" id="fCoo2">
           <summary><span>Coordinadores</span><span class="fcnt" id="dcount">0</span></summary>
-          <button id="axl" class="btn wide" style="margin:4px 0 6px">Imprimir todo junto (PDF)</button>
-          <p class="hint" style="margin:0 0 12px">Todos los coordinadores y subcoordinadores, cada uno en su hoja. Con muchas personas, mejor desde una computadora.</p>
           <p class="hint" style="margin:4px 0 8px">Toque un nombre para ver sus militantes y sacar su informe.</p>
           <input id="dq" type="search" placeholder="Buscar coordinador…" autocomplete="off">
           <div id="dash" style="margin-top:8px"></div>
@@ -370,6 +370,9 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
             <div><label for="alogo">Logo del partido</label><input id="alogo" type="file" accept="image/*"></div></div>
           <button id="asave" class="btn wide">Guardar</button>
         </div>
+        <h2 style="margin-top:22px">Cuentas a medias</h2>
+        <p class="hint" style="margin:0 0 8px">Si al crear a alguien sale «Ya hay una persona con ese nombre» pero esa persona no aparece en ninguna lista, su cuenta quedó a medias. Este botón las limpia. No borra a nadie que esté funcionando.</p>
+        <button id="ahue" class="btn ghost wide">Reparar cuentas a medias</button>
       </div>
     </div>
 
@@ -382,7 +385,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 04-nov-2026 (32)</p>
+  <p class="ver" id="ver">Versión 04-nov-2026 (33)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -546,13 +549,21 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var msg="Hola "+nombre+". Ya tiene acceso a la app Estructura de apoyo como "+rol+".\n\nEntre aquí: "+appUrl()+"\nUsuario: "+nombre+"\nClave: su número de cédula, sin guiones.\n\nAl entrar, toque «Cambiar mi clave» y ponga una clave suya.";
     return '<div class="note ok"><b>Listo. '+esc(nombre)+' ya puede entrar.</b><br>Usuario: '+esc(nombre)+'<br>Clave: su cédula, sin guiones</div><a class="btn wide" target="_blank" rel="noopener" href="'+esc(waLink(tel,msg))+'">Enviarle el acceso por WhatsApp</a>'}
   /* Crea la cuenta de entrada: usuario = nombre completo, clave = cédula sin guiones */
+  /* Cédula y teléfono de verdad: con sus números completos y no todos iguales (000-0000000-0 no vale). */
+  function repetido(d){return /^(\d)\1+$/.test(d)}
+  function cedMal(c){var d=digits(c);return d.length!==11?"La cédula debe tener 11 números":repetido(d)?"Esa cédula no es válida. Escriba la cédula real":""}
+  function telMal(t){var d=digits(t);return d.length!==10?"El teléfono debe tener 10 números":repetido(d)?"Ese teléfono no es válido. Escriba el teléfono real":""}
   async function crearCuenta(nom,ced,tel){
-    var cd=digits(ced);
+    var cd=digits(ced),em=userEmail(nom),m;
     if(nom.length<3)throw new Error("Escriba el nombre completo");
-    if(cd.length!==11)throw new Error("La cédula debe tener 11 números");
-    if(digits(tel).length!==10)throw new Error("El teléfono debe tener 10 números");
+    if((m=cedMal(ced)))throw new Error(m);
+    if((m=telMal(tel)))throw new Error(m);
     var tmp=supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:"tmp-"+Date.now()}});
-    var s=await tmp.auth.signUp({email:userEmail(nom),password:cd});
+    var s=await tmp.auth.signUp({email:em,password:cd});
+    /* Si ya existe una cuenta con ese nombre pero quedó a medias (sin perfil), se repara y se intenta otra vez. */
+    if(s.error&&/registered|exists/i.test(s.error.message)){
+      var fx=null;try{fx=await sb.rpc("limpiar_cuenta_huerfana",{p_email:em})}catch(x){}
+      if(fx&&!fx.error&&fx.data===true)s=await tmp.auth.signUp({email:em,password:cd})}
     if(s.error)throw new Error(/registered|exists/i.test(s.error.message)?"Ya hay una persona con ese nombre. Añada el segundo apellido para diferenciarla.":s.error.message);
     if(!s.data||!s.data.user)throw new Error("No se pudo crear la cuenta.");
     return {id:s.data.user.id,ced:fmtC(cd)}}
@@ -684,7 +695,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     ME=r.data;resetIdle();await loadZonas();
     $("vCoord").hidden=ME.rol==="admin";$("vAdmin").hidden=ME.rol!=="admin";
     show("sApp");
-    $("cSub").hidden=!(ME.rol==="coordinador"&&ME.puede_comites);$("snew").innerHTML="";$("cnew").innerHTML="";
+    $("cSub").hidden=!(ME.rol==="coordinador"&&ME.puede_comites);$("snew").innerHTML="";$("cnew").innerHTML="";$("cxe").hidden=true;SUBS=[];
     if(ME.rol==="admin")tab("res");else{drawCoordHead();showMiZona();loadMine();doSearch();if(!$("cSub").hidden)loadSubs()}
   }
 
@@ -692,8 +703,16 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   $("fLogin").onsubmit=async function(e){
     e.preventDefault();if(busy)return;busy=true;$("lgo").disabled=true;$("lerr").hidden=true;
     try{
-      var r=await sb.auth.signInWithPassword({email:userEmail($("lu").value),password:$("lp").value});
-      if(r.error){$("lerr").hidden=false;$("lerr").textContent=/Invalid login/i.test(r.error.message)?"Usuario o clave incorrectos.":errMsg(r.error)}
+      /* Se prueba el usuario tal como lo escribió y, si trae coma (formato del padrón «APELLIDOS, NOMBRES»),
+         también al derecho. La clave se prueba tal cual y, si es una cédula con guiones, solo con los números. */
+      var u0=$("lu").value,p0=$("lp").value,us=[userEmail(u0)],ps=[p0];
+      if(u0.indexOf(",")>-1&&us.indexOf(userEmail(nv(u0)))<0)us.push(userEmail(nv(u0)));
+      if(digits(p0).length===11&&digits(p0)!==p0)ps.push(digits(p0));
+      var r=null;
+      outer:for(var ui=0;ui<us.length;ui++)for(var pi=0;pi<ps.length;pi++){
+        r=await sb.auth.signInWithPassword({email:us[ui],password:ps[pi]});
+        if(!r.error||!/Invalid login/i.test(r.error.message))break outer}
+      if(r.error){$("lerr").hidden=false;$("lerr").textContent=/Invalid login/i.test(r.error.message)?"Usuario o clave incorrectos. Escriba su nombre completo en el mismo orden en que se lo dieron, y su cédula como clave.":/rate|too many/i.test(r.error.message)?"Demasiados intentos. Espere unos minutos y vuelva a probar.":errMsg(r.error)}
       else{$("lp").value="";await enter()}
     }catch(x){$("lerr").hidden=false;$("lerr").textContent=errMsg(x)}
     busy=false;$("lgo").disabled=false;
@@ -704,8 +723,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   function falta(x){return /Could not find the function|schema cache/i.test((x&&x.message)||"")}
   $("fMan").onsubmit=async function(e){
     e.preventDefault();if(busy)return;
-    if(digits($("mced").value).length!==11){toast("La cédula debe tener 11 números");return}
-    if(digits($("mtel").value).length!==10){toast("El teléfono debe tener 10 números");return}
+    var vm=cedMal($("mced").value)||telMal($("mtel").value);if(vm){toast(vm);return}
     busy=true;$("mgo").disabled=true;var mcd=digits($("mced").value);
     try{
       var r=await sb.rpc("anadir_manual",{p_nombre:$("mnom").value,p_cedula:$("mced").value,p_celular:$("mtel").value,p_recinto:$("mrec").value,p_colegio:$("mcol").value});
@@ -774,18 +792,24 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       (fuera?'<div class="cf"><div><label>Recinto</label><input name="r" maxlength="80" value="'+esc(p.recinto==="Fuera del padrón"?"":p.recinto||"")+'"></div><div><label>Colegio</label><input name="c2" maxlength="20" value="'+esc(p.colegio||"")+'"></div></div>':'<p class="hint">El nombre, la cédula, el recinto y el colegio vienen del padrón y no se cambian.</p>')+
       '<div class="acts" style="justify-content:stretch"><button class="btn" style="flex:1" type="submit">Guardar</button><button class="btn ghost" style="flex:1" type="button" data-edx="'+(cid?"ae-":"me-")+id+'">Cancelar</button></div></form>';
     box.hidden=false}
-  $("cxl").onclick=function(){var b=this;withBusy(b,async function(){
-    var jefe=ME.rol==="jefe",info=await datosPersona(ME.cedula);
-    var gs=[{tipo:jefe?"Subcoordinador":"Coordinador",padre:"",nombre:ME.nombre,cedula:ME.cedula,telefono:ME.telefono,recinto:info.recinto||ME.recinto||"",colegio:info.colegio||"",fecha:ME.creado,zona:MIZONA?zLabel(MIZONA):ME.zona||"",
-      mil:MINE.slice().reverse().map(function(p){return mRow(p,p.creado)})}];
-    if(!jefe&&!$("cSub").hidden){
-      var fr={};try{var rf=await sb.rpc("fechas_comites");(rf.data||[]).forEach(function(x){fr[x.id]=x.creado})}catch(e){}
-      for(var i=0;i<SUBS.length;i++){
-        var s=SUBS[i],r=await sb.rpc("militantes_de",{p_coord:s.id});if(r.error)throw r.error;
-        var si=await datosPersona(s.cedula);
-        gs.push({tipo:"Subcoordinador",padre:ME.nombre,nombre:s.nombre,cedula:s.cedula,telefono:s.telefono,recinto:si.recinto||s.recinto||"",colegio:si.colegio||"",fecha:fr[s.id],zona:MIZONA?zLabel(MIZONA):s.zona||"",
-          mil:(r.data||[]).slice().reverse().map(function(p){return mRow(p,p.creado)})})}}
-    printReport("Informe de "+ME.nombre,gs)})};
+  /* Informes del coordinador o subcoordinador que entró.
+     modo "mio": solo sus militantes · "equipo": los suyos y los de cada subcoordinador · "sub": un subcoordinador (id) */
+  async function hojaSub(s,fr){
+    var r=await sb.rpc("militantes_de",{p_coord:s.id});if(r.error)throw r.error;
+    var si=await datosPersona(s.cedula);
+    return {tipo:"Subcoordinador",padre:ME.nombre,nombre:s.nombre,cedula:s.cedula,telefono:s.telefono,recinto:si.recinto||s.recinto||"",colegio:si.colegio||"",fecha:fr[s.id],zona:MIZONA?zLabel(MIZONA):s.zona||"",
+      mil:(r.data||[]).slice().reverse().map(function(p){return mRow(p,p.creado)})}}
+  async function fechasSubs(){var fr={};try{var rf=await sb.rpc("fechas_comites");(rf.data||[]).forEach(function(x){fr[x.id]=x.creado})}catch(e){}return fr}
+  function miInforme(b,modo,sid){withBusy(b,async function(){
+    var jefe=ME.rol==="jefe",gs=[];
+    if(modo==="sub"){var s=subById(sid);if(!s)return;gs.push(await hojaSub(s,await fechasSubs()));printReport("Informe de "+s.nombre,gs);return}
+    var info=await datosPersona(ME.cedula);
+    gs.push({tipo:jefe?"Subcoordinador":"Coordinador",padre:"",nombre:ME.nombre,cedula:ME.cedula,telefono:ME.telefono,recinto:info.recinto||ME.recinto||"",colegio:info.colegio||"",fecha:ME.creado,zona:MIZONA?zLabel(MIZONA):ME.zona||"",
+      mil:MINE.slice().reverse().map(function(p){return mRow(p,p.creado)})});
+    if(modo==="equipo"&&!jefe&&!$("cSub").hidden){var fr=await fechasSubs();for(var i=0;i<SUBS.length;i++)gs.push(await hojaSub(SUBS[i],fr))}
+    printReport(modo==="equipo"&&gs.length>1?"Informe de "+ME.nombre+" y su equipo":"Informe de "+ME.nombre,gs)})}
+  $("cxl").onclick=function(){miInforme(this,"mio")};
+  $("cxe").onclick=function(){miInforme(this,"equipo")};
 
   /* ---------- subcoordinadores (los maneja el coordinador) ---------- */
   var SUBS=[],SOPEN=null;
@@ -796,7 +820,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   async function loadSubs(){
     var r=await sb.rpc("mis_comites");
     if(r.error){$("slist").innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
-    SUBS=r.data||[];drawTot();
+    SUBS=r.data||[];drawTot();$("cxe").hidden=!SUBS.length;
     $("slist").innerHTML=SUBS.map(function(s){
       return '<div class="cw"><div class="row"><div><div class="nm">'+esc(s.nombre)+(s.activo?"":" (desactivado)")+'</div><div class="sub">'+s.n+" militantes"+(s.zona?" · "+esc(s.zona):"")+(s.telefono?" · "+esc(s.telefono):"")+'</div></div><div class="acts"><button class="btn ghost" data-sv="'+s.id+'">Ver</button></div></div><div class="cdet" id="sd-'+s.id+'" hidden></div></div>'}).join("");
     if(SOPEN&&subById(SOPEN))openSub(SOPEN,true);else SOPEN=null;
@@ -807,7 +831,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(SOPEN&&SOPEN!==id){var o=$("sd-"+SOPEN);if(o)o.hidden=true}
     SOPEN=id;var s=subById(id);box.hidden=false;
     box.innerHTML='<form class="fld" data-sedit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(s.nombre)+'" required></div><div class="cf"><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(s.telefono||"")+'" required></div><div><label>Zona o sector</label><input name="z" value="'+esc(s.zona||"")+'"></div></div><p class="hint">Cambiar el nombre aquí no cambia su usuario de entrada.</p><button class="btn wide" type="submit">Guardar cambios</button></form>'+
-      '<div class="acts" style="justify-content:stretch;margin-top:10px"><button class="btn ghost" style="flex:1" data-srst="'+id+'">Clave = su cédula</button><button class="btn ghost" style="flex:1" data-sact="'+id+'">'+(s.activo?"Desactivar":"Activar")+'</button></div>'+
+      '<div class="acts" style="justify-content:stretch;margin-top:10px"><button class="btn" style="flex:1" data-spdf="'+id+'">Informe PDF</button><button class="btn ghost" style="flex:1" data-srst="'+id+'">Clave = su cédula</button><button class="btn ghost" style="flex:1" data-sact="'+id+'">'+(s.activo?"Desactivar":"Activar")+'</button></div>'+
       '<h3 class="mh">Sus militantes</h3><div id="sm-'+id+'"><p class="empty">Cargando…</p></div>';
     var r=await sb.rpc("militantes_de",{p_coord:id}),ml=$("sm-"+id);if(!ml)return;
     if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
@@ -823,6 +847,11 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     e.preventDefault();if(busy)return;busy=true;$("sgo").disabled=true;
     var nom=$("snom").value.trim().replace(/\s+/g," "),tel=$("stel").value;
     try{
+      /* Primero se confirma en el servidor que todavía tiene permiso; así no queda una cuenta a medias. */
+      var yo=await sb.from("perfiles").select("activo,puede_comites,rol").eq("id",ME.id).maybeSingle();
+      if(yo.error)throw yo.error;
+      if(!yo.data||!yo.data.activo||yo.data.rol!=="coordinador"||!yo.data.puede_comites){
+        ME.puede_comites=false;$("cSub").hidden=true;throw new Error("Usted ya no tiene permiso para crear subcoordinadores. Hable con el administrador.")}
       var c=await crearCuenta(nom,$("sced").value,tel);
       var r=await sb.rpc("crear_jefe",{p_id:c.id,p_nombre:nom,p_zona:$("szon").value.trim(),p_telefono:tel,p_cedula:c.ced});
       if(r.error)throw r.error;
@@ -861,7 +890,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   function dcHtml(p,esJ){
     var nj=esJ?0:jefesDe(p.id).length,meta=Number(p.meta||META||0),n=Number(p.n||0);
     var info=[esJ?"Subcoordinador":(p.zona||""),nj?nj+" subcoord.":"",esJ?"":(p.propios!=null&&nj?p.propios+" propios":""),p.activo?"":"Desactivado"].filter(Boolean).join(" · ");
-    return '<details class="dc'+(p.activo?"":" off")+'" data-cid="'+p.id+'" data-q="'+esc(String(p.nombre||"").toLowerCase())+'"><summary><div class="dn"><div class="nm">'+esc(nv(p.nombre))+'</div>'+(info?'<div class="sub">'+esc(info)+"</div>":"")+
+    var fd=[cedMal(p.cedula)?"cédula":"",telMal(p.telefono)?"teléfono":"",!esJ&&ZOK&&ZONAS.length&&!p.zona_id?"zona":""].filter(Boolean);
+    return '<details class="dc'+(p.activo?"":" off")+'" data-cid="'+p.id+'" data-q="'+esc(String(p.nombre||"").toLowerCase())+'"><summary><div class="dn"><div class="nm">'+esc(nv(p.nombre))+'</div>'+(info?'<div class="sub">'+esc(info)+"</div>":"")+(fd.length?'<span class="vf">⚠ Falta: '+fd.join(", ")+"</span>":"")+
       (meta>0?'<div class="mbar" title="Meta: '+meta+'"><i style="width:'+Math.min(100,n/meta*100)+'%"></i></div><div class="sub">'+n+" de "+meta+" (meta)</div>":"")+
       '</div><span class="cnt">'+n+'</span></summary><div class="dcb" id="db-'+p.id+'"><p class="empty">Cargando…</p></div></details>'}
   var DM={};/* militantes cargados en el tablero del administrador, por padron_id */
@@ -943,7 +973,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     box.innerHTML='<form class="fld" data-edit="'+id+'" autocomplete="off"><p class="hint" style="margin:0">Los campos con <span class="req" aria-hidden="true">*</span> son obligatorios.</p><div><label>Nombre<span class="req" aria-hidden="true">*</span></label><input name="n" value="'+esc(c.nombre)+'" required></div><div><label>Cédula<span class="req" aria-hidden="true">*</span></label><input name="c" inputmode="numeric" maxlength="13" placeholder="000-0000000-0" value="'+esc(c.cedula||"")+'" required></div><div class="cf"><div><label>Teléfono<span class="req" aria-hidden="true">*</span></label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'" required></div><div><label>Zona<span class="req" aria-hidden="true">*</span></label>'+(ZOK?'<select name="zid" required>'+zonaOpts(c.zona_id)+"</select>"+(c.zona&&!c.zona_id?'<p class="hint">Escrito antes: «'+esc(c.zona)+"»</p>":""):'<input name="z" value="'+esc(c.zona||"")+'">')+'</div></div><label class="chk"><input type="checkbox" name="pc"'+(c.puede_comites?" checked":"")+'> Puede crear subcoordinadores</label><p class="hint">Cambiar el nombre aquí no cambia su usuario de entrada.</p><button class="btn wide" type="submit">Guardar cambios</button></form>'+
       '<button class="btn ghost wide" style="margin-top:10px" data-rc="'+id+'">Restablecer clave a su cédula</button>'+
       '<h3 class="mh">Subcoordinadores ('+js.length+')</h3>'+(js.length?js.map(function(j){
-        return '<div class="row"><div><div class="nm">'+esc(j.nombre)+(j.activo?"":" (desactivado)")+'</div><div class="sub">'+j.n+" militantes"+(j.telefono?" · "+esc(j.telefono):"")+'</div></div><button class="btn ghost" data-rc="'+j.id+'">Clave = cédula</button></div>'}).join(""):'<p class="empty">No tiene subcoordinadores.</p>')+
+        return '<div class="row"><div><div class="nm">'+esc(j.nombre)+(j.activo?"":" (desactivado)")+'</div><div class="sub">'+j.n+" militantes"+(j.telefono?" · "+esc(j.telefono):"")+'</div></div><div class="acts"><button class="btn ghost" data-rc="'+j.id+'">Clave = cédula</button><button class="btn ghost" data-act="'+j.id+'" data-to="'+(j.activo?0:1)+'">'+(j.activo?"Desactivar":"Activar")+'</button></div></div>'}).join(""):'<p class="empty">No tiene subcoordinadores.</p>')+
       '<h3 class="mh">Militantes propios</h3><button class="btn wide" data-pdf="'+id+'" style="margin-bottom:6px">Informe en PDF (con sus subcoordinadores)</button><div id="ml-'+id+'"><p class="empty">Cargando…</p></div>';
     var r=await sb.from("seguidores").select("padron_id,creado,padron(nombre,cedula,recinto,colegio,celular,estado)").eq("coord_id",id).order("creado",{ascending:false});
     var ml=$("ml-"+id);if(!ml)return;
@@ -1043,7 +1073,10 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     }catch(x){toast(errMsg(x))}
     busy=false;$("cadd").disabled=false;
   };
-  async function setActivo(id,v){var r=await sb.from("perfiles").update({activo:v}).eq("id",id);if(r.error)toast(errMsg(r.error));else{toast(v?"Coordinador activado":"Coordinador desactivado");loadRes()}}
+  async function setActivo(id,v){
+    var pe=COO[id]||JEF[id]||{},cargo=JEF[id]?"Subcoordinador":"Coordinador";
+    if(!v&&!confirm("¿Desactivar a "+nv(pe.nombre||"esta persona")+"? No podrá entrar hasta que lo active de nuevo."+(COO[id]&&jefesDe(id).length?"\n\nSus subcoordinadores tampoco podrán entrar mientras esté desactivado.":"")))return;
+    var r=await sb.from("perfiles").update({activo:v}).eq("id",id);if(r.error)toast(errMsg(r.error));else{toast(cargo+(v?" activado":" desactivado"));loadRes()}}
 
   /* ---- padrón ---- */
   async function loadPadCount(){
@@ -1247,6 +1280,10 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     im.onerror=function(){toast("No se pudo leer la imagen")};im.src=u}
   $("afoto").onchange=function(){if(this.files[0])readImg(this.files[0],true,function(d){NEWFOTO=d;$("pvf").src=d;$("pvf").hidden=false;$("pvft").hidden=true})};
   $("alogo").onchange=function(){if(this.files[0])readImg(this.files[0],false,function(d){NEWLOGO=d;$("pvl").src=d;$("pvl").hidden=false;$("pvlt").hidden=true})};
+  $("ahue").onclick=function(){var b=this;withBusy(b,async function(){
+    var r=await sb.rpc("admin_limpiar_huerfanas");
+    if(r.error){toast(falta(r.error)?"Falta pegar en Supabase el archivo reparar-cuentas.sql":errMsg(r.error));return}
+    toast(r.data?"Listo: "+r.data+" cuenta"+(r.data>1?"s":"")+" a medias reparada"+(r.data>1?"s":"")+". Ya se pueden crear de nuevo.":"No había cuentas a medias.")})};
   $("asave").onclick=async function(){
     var u={candidato:$("anom").value.trim()};if(NEWFOTO)u.foto=NEWFOTO;if(NEWLOGO)u.logo=NEWLOGO;
     var r=await sb.from("config").update(u).eq("id",1);
@@ -1270,6 +1307,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if((g("data-sq")||g("data-aq"))&&!confirm("¿Quitar a "+(nm||"esta persona")+" de la lista?\n\nPodrá volver a añadirla después si hace falta."))return;
     if(g("data-rc")){var rc=g("data-rc"),pp=COO[rc]||JEF[rc]||{};resetCed(rc,pp.cedula);return}
     if(g("data-sv")){openSub(g("data-sv"));return}
+    if(g("data-spdf")){miInforme(t,"sub",g("data-spdf"));return}
     if(g("data-srst")){var s1=subById(g("data-srst"));if(s1)resetCed(s1.id,s1.cedula);return}
     if(g("data-sact")){var s2=subById(g("data-sact"));if(!s2)return;
       if(s2.activo&&!confirm("¿Desactivar a "+s2.nombre+"? No podrá entrar hasta que lo active de nuevo."))return;
@@ -1296,7 +1334,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var f=e.target;if(!f.getAttribute)return;
     if(f.getAttribute("data-medit")){
       e.preventDefault();var mid=f.getAttribute("data-medit"),el=f.elements;
-      if(digits(el.t.value).length!==10){toast("El teléfono debe tener 10 números");return}
+      var vt=telMal(el.t.value);if(vt){toast(vt);return}
       var bt=f.querySelector("[type=submit]");bt.disabled=true;
       var rm=await sb.rpc("editar_militante",{p_id:+mid,p_tel:el.t.value,p_dir:el.d.value,p_apodo:el.a.value,p_recinto:el.r?el.r.value:"",p_colegio:el.c2?el.c2.value:""});
       bt.disabled=false;
@@ -1306,7 +1344,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(f.getAttribute("data-sedit")){
       e.preventDefault();var s=subById(f.getAttribute("data-sedit")),sn=f.elements.n.value.trim();
       if(!s)return;if(sn.length<3){toast("Escriba el nombre");return}
-      if(digits(f.elements.t.value).length!==10){toast("El teléfono debe tener 10 números");return}
+      var vs=telMal(f.elements.t.value);if(vs){toast(vs);return}
       var rs=await sb.rpc("editar_jefe",jefeArgs(s,{p_nombre:sn,p_telefono:f.elements.t.value,p_zona:f.elements.z.value.trim()}));
       if(rs.error){toast(errMsg(rs.error));return}
       toast("Cambios guardados");loadSubs();return}
@@ -1330,8 +1368,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(!f.getAttribute("data-edit"))return;
     e.preventDefault();var id=f.getAttribute("data-edit"),n=f.elements.n.value.trim(),cd=digits(f.elements.c.value);
     if(!n){toast("Escriba el nombre");return}
-    if(cd.length!==11){toast("La cédula debe tener 11 números");return}
-    if(digits(f.elements.t.value).length!==10){toast("El teléfono debe tener 10 números");return}
+    var ve=cedMal(cd)||telMal(f.elements.t.value);if(ve){toast(ve);return}
     if(f.elements.zid&&ZONAS.length&&!Number(f.elements.zid.value)){toast("Elija la zona del coordinador");f.elements.zid.focus();return}
     var upd={nombre:n,cedula:cd?fmtC(cd):"",telefono:f.elements.t.value,puede_comites:f.elements.pc.checked},c0=COO[id]||{};
     if(f.elements.zid){var zid=Number(f.elements.zid.value)||null;upd.zona_id=zid;upd.zona=zid?zLabel(zid):(c0.zona_id?"":c0.zona||"")}
