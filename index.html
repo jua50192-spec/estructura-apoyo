@@ -96,6 +96,9 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .chk input{width:22px;height:22px;flex:none;margin:0}
 .hint{font-size:13px;color:var(--mute);margin:0}
 .medit{background:var(--tile);border-radius:8px;padding:12px;margin:0 0 10px}
+.mirow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.mirow>.pr{min-width:0;flex:1}
+.mi .medit{margin:8px 0 0}
 select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
 .pr{display:flex;gap:10px;align-items:flex-start;min-width:0}
 .pr>div{min-width:0}
@@ -378,7 +381,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 03-nov-2026 (30)</p>
+  <p class="ver" id="ver">Versión 03-nov-2026 (31)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -752,13 +755,14 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     var falt=!$("sced").value?$("sced"):!$("stel").value?$("stel"):null;
     if(falt){setTimeout(function(){falt.focus()},400);toast("Escriba "+(falt.id==="sced"?"la cédula":"el teléfono")+" y toque «Crear subcoordinador»")}
     else toast("Revise los datos y toque «Crear subcoordinador»")}
-  function openEdit(id){
-    var box=$("me-"+id),p=mineById(id);if(!box||!p)return;
+  /* Editar militante. Coordinador: su lista (caja me-ID). Administrador: tablero (caja ae-ID, cid = dueño). */
+  function openEdit(id,cid){
+    var box=$((cid?"ae-":"me-")+id),p=cid?DM[id]:mineById(id);if(!box||!p)return;
     if(!box.hidden){box.hidden=true;return}
     var fuera=p.estado==="Fuera del padrón";
-    box.innerHTML='<form class="fld" data-medit="'+id+'" autocomplete="off"><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" placeholder="000-000-0000" value="'+esc(fmtCel(p.celular))+'" required></div><div class="cf"><div><label>Apodo (opcional)</label><input name="a" maxlength="60" value="'+esc(p.apodo||"")+'"></div><div><label>Dirección (opcional)</label><input name="d" maxlength="200" value="'+esc(p.direccion||"")+'"></div></div>'+
+    box.innerHTML='<form class="fld" data-medit="'+id+'"'+(cid?' data-mco="'+cid+'"':"")+' autocomplete="off"><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" placeholder="000-000-0000" value="'+esc(fmtCel(p.celular))+'" required></div><div class="cf"><div><label>Apodo (opcional)</label><input name="a" maxlength="60" value="'+esc(p.apodo||"")+'"></div><div><label>Dirección (opcional)</label><input name="d" maxlength="200" value="'+esc(p.direccion||"")+'"></div></div>'+
       (fuera?'<div class="cf"><div><label>Recinto</label><input name="r" maxlength="80" value="'+esc(p.recinto==="Fuera del padrón"?"":p.recinto||"")+'"></div><div><label>Colegio</label><input name="c2" maxlength="20" value="'+esc(p.colegio||"")+'"></div></div>':'<p class="hint">El nombre, la cédula, el recinto y el colegio vienen del padrón y no se cambian.</p>')+
-      '<div class="acts" style="justify-content:stretch"><button class="btn" style="flex:1" type="submit">Guardar</button><button class="btn ghost" style="flex:1" type="button" data-edx="'+id+'">Cancelar</button></div></form>';
+      '<div class="acts" style="justify-content:stretch"><button class="btn" style="flex:1" type="submit">Guardar</button><button class="btn ghost" style="flex:1" type="button" data-edx="'+(cid?"ae-":"me-")+id+'">Cancelar</button></div></form>';
     box.hidden=false}
   $("cxl").onclick=function(){var b=this;withBusy(b,async function(){
     var jefe=ME.rol==="jefe",info=await datosPersona(ME.cedula);
@@ -850,9 +854,13 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     return '<details class="dc'+(p.activo?"":" off")+'" data-cid="'+p.id+'" data-q="'+esc(String(p.nombre||"").toLowerCase())+'"><summary><div class="dn"><div class="nm">'+esc(nv(p.nombre))+'</div>'+(info?'<div class="sub">'+esc(info)+"</div>":"")+
       (meta>0?'<div class="mbar" title="Meta: '+meta+'"><i style="width:'+Math.min(100,n/meta*100)+'%"></i></div><div class="sub">'+n+" de "+meta+" (meta)</div>":"")+
       '</div><span class="cnt">'+n+'</span></summary><div class="dcb" id="db-'+p.id+'"><p class="empty">Cargando…</p></div></details>'}
-  function miHtml(p,creado,pid){
+  var DM={};/* militantes cargados en el tablero del administrador, por padron_id */
+  function miHtml(p,creado,pid,cid){
     var tel=p.celular?'<a href="tel:'+esc(digits(p.celular))+'">'+esc(fmtCel(p.celular))+"</a>":'<span style="color:var(--bad)">Sin teléfono</span>';
-    return '<div class="mi"><div class="pr">'+foto(pid)+'<div><div class="nm">'+esc(nv(p.nombre))+'</div><div class="sub">'+esc(cv(p.cedula)||"Sin cédula")+" · "+tel+"<br>"+esc([lugar(p),fecha(creado)].filter(Boolean).join(" · "))+vfTag(p)+"</div></div></div></div>"}
+    var ed=ME&&ME.rol==="admin"&&cid;
+    return '<div class="mi"><div class="mirow"><div class="pr">'+foto(pid)+'<div><div class="nm">'+esc(nv(p.nombre))+(p.apodo?' <span class="sub">('+esc(p.apodo)+")</span>":"")+'</div><div class="sub">'+esc(cv(p.cedula)||"Sin cédula")+" · "+tel+"<br>"+esc([lugar(p),fecha(creado)].filter(Boolean).join(" · "))+vfTag(p)+"</div></div></div>"+
+      (ed?'<button class="btn ghost" data-aed="'+pid+'" data-aco="'+cid+'">Editar</button>':"")+"</div>"+
+      (ed?'<div class="medit" id="ae-'+pid+'" hidden></div>':"")+"</div>"}
   function renderDash(){
     var open=[].map.call(document.querySelectorAll("#dash details[open]"),function(d){return d.getAttribute("data-cid")});
     var co=Object.keys(COO).map(function(k){return COO[k]}).sort(function(a,b){return (b.activo-a.activo)||(b.n-a.n)||a.nombre.localeCompare(b.nombre)});
@@ -869,13 +877,14 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   async function loadDash(id){
     var box=$("db-"+id);if(!box)return;
     var esJ=!!JEF[id];
-    var r=await sb.from("seguidores").select("padron_id,creado,padron(nombre,cedula,recinto,colegio,celular,estado)").eq("coord_id",id).order("creado",{ascending:false});
+    var r=await sb.from("seguidores").select("padron_id,creado,padron(nombre,cedula,recinto,colegio,celular,estado,apodo,direccion)").eq("coord_id",id).order("creado",{ascending:false});
     if(r.error){box.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     var a=r.data||[],js=esJ?[]:jefesDe(id);
+    a.forEach(function(x){DM[x.padron_id]=x.padron||{}});
     box.innerHTML=(esJ?"":'<div class="dact"><button class="btn" data-pdf="'+id+'">Informe PDF</button><button class="btn ghost" data-goc="'+id+'">Editar coordinador</button></div>')+
       (js.length?'<h3 class="mh">Subcoordinadores ('+js.length+")</h3>"+js.map(function(j){return dcHtml(j,true)}).join(""):"")+
       '<h3 class="mh">'+(js.length?"Militantes propios":"Militantes")+" ("+a.length+")</h3>"+
-      (a.length?a.map(function(x){return miHtml(x.padron||{},x.creado,x.padron_id)}).join(""):'<p class="empty">Todavía no ha inscrito militantes.</p>');
+      (a.length?a.map(function(x){return miHtml(x.padron||{},x.creado,x.padron_id,id)}).join(""):'<p class="empty">Todavía no ha inscrito militantes.</p>');
     cargarFotos(box)}
   document.addEventListener("toggle",function(e){
     var d=e.target;if(!d.classList||!d.classList.contains("dc")||!d.open)return;
@@ -1243,7 +1252,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       setTimeout(function(){var el=$("cd-"+gid);if(el)el.scrollIntoView({behavior:"smooth",block:"start"})},900);return}
     if(g("data-ed")){openEdit(g("data-ed"));return}
     if(g("data-hsub")){hacerSub(g("data-hsub"));return}
-    if(g("data-edx")){var bx=$("me-"+g("data-edx"));if(bx)bx.hidden=true;return}
+    if(g("data-edx")){var bx=$(g("data-edx"));if(bx)bx.hidden=true;return}
+    if(g("data-aed")){openEdit(g("data-aed"),g("data-aco"));return}
     var nm=g("data-nm");
     if((g("data-sq")||g("data-aq"))&&!confirm("¿Quitar a "+(nm||"esta persona")+" de la lista?\n\nPodrá volver a añadirla después si hace falta."))return;
     if(g("data-rc")){var rc=g("data-rc"),pp=COO[rc]||JEF[rc]||{};resetCed(rc,pp.cedula);return}
@@ -1279,7 +1289,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       var rm=await sb.rpc("editar_militante",{p_id:+mid,p_tel:el.t.value,p_dir:el.d.value,p_apodo:el.a.value,p_recinto:el.r?el.r.value:"",p_colegio:el.c2?el.c2.value:""});
       bt.disabled=false;
       if(rm.error){toast(falta(rm.error)?"Falta pegar en Supabase el archivo cambios_v13.sql":errMsg(rm.error));return}
-      toast("Datos actualizados");loadMine();return}
+      toast("Datos actualizados");
+      var mco=f.getAttribute("data-mco");if(mco)loadDash(mco);else loadMine();return}
     if(f.getAttribute("data-sedit")){
       e.preventDefault();var s=subById(f.getAttribute("data-sedit")),sn=f.elements.n.value.trim();
       if(!s)return;if(sn.length<3){toast("Escriba el nombre");return}
