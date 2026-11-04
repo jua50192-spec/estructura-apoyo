@@ -165,6 +165,10 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
 .rh .rd{font-size:8.5pt;color:#444;margin-top:2px}
 .rsum{font-size:9pt;margin:0 0 10px;color:#222}
 .rgr{margin:0 0 14px}
+.rpage{break-before:page;page-break-before:always}
+.rpage:first-child{break-before:auto;page-break-before:auto}
+.rpage .rbox{margin-bottom:8px}
+.rpage .rsum{margin-top:4px}
 .rbox{border:1.5px solid #0e5a6e;border-radius:4px;padding:7px 9px;background:#eef5f7;break-inside:avoid;break-after:avoid;page-break-inside:avoid;page-break-after:avoid}
 .rbox.sub{border-color:#5b6b76;background:#f3f5f6}
 .rtag{font-size:7.5pt;font-weight:700;letter-spacing:.06em;color:#0e5a6e;text-transform:uppercase}
@@ -374,7 +378,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 29-oct-2026 (29)</p>
+  <p class="ver" id="ver">Versión 03-nov-2026 (30)</p>
 </main>
 <div id="printArea"></div>
 <div id="toast" class="toast" hidden></div>
@@ -572,15 +576,28 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     if(!mil.length)return '<p class="rnone">Sin militantes inscritos.</p>';
     return '<table class="rtab"><thead><tr><th>#</th><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Recinto</th><th>Colegio</th><th>Fecha de registro</th></tr></thead><tbody>'+
       mil.map(function(m,i){return '<tr><td class="n">'+(i+1)+"</td><td>"+esc(m.nombre)+(porConf(m)?'<br><b style="color:#8a5a00">⚠ A confirmar – VERIFICATE</b>':"")+'</td><td class="nw">'+esc(m.cedula||"—")+'</td><td class="nw">'+esc(fmtCel(m.celular)||"—")+"</td><td>"+esc(m.recinto||"—")+(zLugar(m.recinto,m.colegio)?" · "+esc(zLugar(m.recinto,m.colegio)):"")+'</td><td class="nw">'+esc(m.colegio||"—")+'</td><td class="nw">'+fecha(m.creado)+"</td></tr>"}).join("")+"</tbody></table>"}
+  /* Cada coordinador y cada subcoordinador va en su PROPIA HOJA, con su encabezado.
+     Si hay más de uno, la primera hoja es un resumen con la lista de todos. */
   function reportHtml(titulo,gs){
     var tot=gs.reduce(function(a,g){return a+g.mil.length},0),now=new Date();
     var nC=gs.filter(function(g){return g.tipo==="Coordinador"}).length,nS=gs.length-nC;
     var nV=gs.reduce(function(a,g){return a+g.mil.filter(porConf).length},0);
-    return '<div class="rh">'+(CONF.logo?'<img src="'+esc(CONF.logo)+'" alt="">':"")+'<div class="rt"><div class="rc">'+esc(CONF.candidato||"Estructura de apoyo")+'</div><div class="rs">'+esc(titulo)+'</div><div class="rd">Emitido el '+now.toLocaleDateString("es-DO",{day:"2-digit",month:"long",year:"numeric"})+" a las "+now.toLocaleTimeString("es-DO",{hour:"2-digit",minute:"2-digit"})+"</div></div>"+(CONF.foto?'<img src="'+esc(CONF.foto)+'" alt="" style="border-radius:50%;object-fit:cover">':"")+"</div>"+
-      '<p class="rsum"><b>Total de militantes: '+tot+"</b>"+(nC?" · Coordinadores: "+nC:"")+(nS?" · Subcoordinadores: "+nS:"")+"</p>"+
-      (nV?'<p class="rsum" style="color:#8a5a00"><b>⚠ '+nV+" militante"+(nV>1?"s":"")+" a confirmar.</b> "+VFTXT+"</p>":"")+
-      gs.map(function(g){return '<div class="rgr">'+boxHtml(g)+tabHtml(g.mil)+"</div>"}).join("")+
-      '<div class="rfoot">Documento de uso interno. Contiene datos personales: no lo comparta fuera de la estructura.</div>'}
+    var emit="Emitido el "+now.toLocaleDateString("es-DO",{day:"2-digit",month:"long",year:"numeric"})+" a las "+now.toLocaleTimeString("es-DO",{hour:"2-digit",minute:"2-digit"});
+    var head=function(sub){return '<div class="rh">'+(CONF.logo?'<img src="'+esc(CONF.logo)+'" alt="">':"")+'<div class="rt"><div class="rc">'+esc(CONF.candidato||"Estructura de apoyo")+'</div><div class="rs">'+esc(sub)+'</div><div class="rd">'+emit+"</div></div>"+(CONF.foto?'<img src="'+esc(CONF.foto)+'" alt="" style="border-radius:50%;object-fit:cover">':"")+"</div>"};
+    var foot='<div class="rfoot">Documento de uso interno. Contiene datos personales: no lo comparta fuera de la estructura.</div>';
+    var aviso=function(n){return n?'<p class="rsum" style="color:#8a5a00"><b>⚠ '+n+" militante"+(n>1?"s":"")+" a confirmar.</b> "+VFTXT+"</p>":""};
+    var hojas="";
+    if(gs.length>1){
+      hojas+='<section class="rpage">'+head(titulo)+
+        '<p class="rsum"><b>Total de militantes: '+tot+"</b>"+(nC?" · Coordinadores: "+nC:"")+(nS?" · Subcoordinadores: "+nS:"")+"</p>"+aviso(nV)+
+        '<table class="rtab"><thead><tr><th>#</th><th>Nombre</th><th>Cargo</th><th>Zona</th><th>Militantes</th><th>A confirmar</th></tr></thead><tbody>'+
+        gs.map(function(g,i){var v=g.mil.filter(porConf).length;
+          return '<tr><td class="n">'+(i+1)+"</td><td>"+(g.tipo==="Subcoordinador"?"&nbsp;&nbsp;↳ ":"")+"<b>"+esc(g.nombre)+"</b></td><td>"+esc(g.tipo)+(g.padre?'<br><span style="color:#555">equipo de '+esc(g.padre)+"</span>":"")+"</td><td>"+esc(g.zona||"—")+'</td><td class="n" style="width:auto;text-align:center"><b>'+g.mil.length+'</b></td><td class="n" style="width:auto;text-align:center">'+(v||"—")+"</td></tr>"}).join("")+
+        "</tbody></table>"+foot+"</section>"}
+    hojas+=gs.map(function(g){
+      var sub=(g.tipo==="Subcoordinador"?"Equipo del subcoordinador ":"Equipo del coordinador ")+g.nombre;
+      return '<section class="rpage">'+head(sub)+boxHtml(g)+aviso(g.mil.filter(porConf).length)+tabHtml(g.mil)+foot+"</section>"}).join("");
+    return hojas}
   function printReport(titulo,gs){
     var a=$("printArea"),t0=document.title;
     a.innerHTML=reportHtml(titulo,gs);
