@@ -386,7 +386,7 @@ select{width:100%;font:16px var(--body);padding:11px 12px;border:1px solid var(-
     <button id="out" class="btn ghost wide" style="margin-top:10px">Cerrar sesión</button>
   </section>
 
-  <p class="ver" id="ver">Versión 05-nov-2026 (34)</p>
+  <p class="ver" id="ver">Versión 05-nov-2026 (35)</p>
   <p class="ver copy">© 2026 Antonio Hernández. Todos los derechos reservados.</p>
 </main>
 <div id="printArea"></div>
@@ -547,8 +547,18 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
   function cv(c){c=c||"";return /^MANUAL-/.test(c)?"":c}
   function appUrl(){return location.origin+location.pathname}
   function waLink(tel,txt){var d=digits(tel);d=d.length===10?"1"+d:"";return "https://wa.me/"+d+"?text="+encodeURIComponent(txt)}
+  function accesoMsg(nombre,usuario,rol){return "Hola "+nombre+". Ya tiene acceso a la app Estructura de apoyo como "+rol+".\n\nEntre aquí: "+appUrl()+"\nUsuario: "+usuario+"\nClave: su número de cédula, sin guiones (si ya la cambió, use la suya).\n\nAl entrar, toque «Cambiar mi clave» y ponga una clave suya."}
+  /* El usuario de entrada es el nombre con que se creó la cuenta. Si después cambiaron el nombre, se usa el original. */
+  async function usuarioDe(id,nombre){
+    var u=null;try{var r=await sb.rpc("usuario_entrada",{p_id:id});if(!r.error&&r.data)u=r.data}catch(x){}
+    return !u||userEmail(nombre)===u+DOM?nombre:u}
+  async function waAcceso(box,id,nombre,tel,rol,chico){
+    if(!box)return;
+    if(telMal(tel)){box.innerHTML='<p class="hint" style="margin:6px 0 0">Para enviarle el acceso por WhatsApp, primero guarde un teléfono válido.</p>';return}
+    var u=await usuarioDe(id,nombre);
+    box.innerHTML='<a class="btn '+(chico?"ghost":"wide")+'" style="'+(chico?"":"margin-top:10px")+'" target="_blank" rel="noopener" href="'+esc(waLink(tel,accesoMsg(nombre,u,rol)))+'">'+(chico?"Enviar acceso":"Enviar acceso por WhatsApp ("+esc(fmtCel(tel))+")")+"</a>"}
   function credCard(nombre,tel,rol){
-    var msg="Hola "+nombre+". Ya tiene acceso a la app Estructura de apoyo como "+rol+".\n\nEntre aquí: "+appUrl()+"\nUsuario: "+nombre+"\nClave: su número de cédula, sin guiones.\n\nAl entrar, toque «Cambiar mi clave» y ponga una clave suya.";
+    var msg=accesoMsg(nombre,nombre,rol);
     return '<div class="note ok"><b>Listo. '+esc(nombre)+' ya puede entrar.</b><br>Usuario: '+esc(nombre)+'<br>Clave: su cédula, sin guiones</div><a class="btn wide" target="_blank" rel="noopener" href="'+esc(waLink(tel,msg))+'">Enviarle el acceso por WhatsApp</a>'}
   /* Crea la cuenta de entrada: usuario = nombre completo, clave = cédula sin guiones */
   /* Cédula y teléfono de verdad: con sus números completos y no todos iguales (000-0000000-0 no vale). */
@@ -834,7 +844,8 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     SOPEN=id;var s=subById(id);box.hidden=false;
     box.innerHTML='<form class="fld" data-sedit="'+id+'" autocomplete="off"><div><label>Nombre</label><input name="n" value="'+esc(s.nombre)+'" required></div><div class="cf"><div><label>Teléfono</label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(s.telefono||"")+'" required></div><div><label>Zona o sector</label><input name="z" value="'+esc(s.zona||"")+'"></div></div><p class="hint">Cambiar el nombre aquí no cambia su usuario de entrada.</p><button class="btn wide" type="submit">Guardar cambios</button></form>'+
       '<div class="acts" style="justify-content:stretch;margin-top:10px"><button class="btn" style="flex:1" data-spdf="'+id+'">Informe PDF</button><button class="btn ghost" style="flex:1" data-srst="'+id+'">Clave = su cédula</button><button class="btn ghost" style="flex:1" data-sact="'+id+'">'+(s.activo?"Desactivar":"Activar")+'</button></div>'+
-      '<h3 class="mh">Sus militantes</h3><div id="sm-'+id+'"><p class="empty">Cargando…</p></div>';
+      '<div id="wa-s-'+id+'"></div><h3 class="mh">Sus militantes</h3><div id="sm-'+id+'"><p class="empty">Cargando…</p></div>';
+    waAcceso($("wa-s-"+id),id,s.nombre,s.telefono,"subcoordinador");
     var r=await sb.rpc("militantes_de",{p_coord:id}),ml=$("sm-"+id);if(!ml)return;
     if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
     ml.innerHTML=(r.data||[]).map(function(p){
@@ -973,10 +984,12 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     OPEN=id;var c=COO[id];box.hidden=false;
     var js=jefesDe(id);
     box.innerHTML='<form class="fld" data-edit="'+id+'" autocomplete="off"><p class="hint" style="margin:0">Los campos con <span class="req" aria-hidden="true">*</span> son obligatorios.</p><div><label>Nombre<span class="req" aria-hidden="true">*</span></label><input name="n" value="'+esc(c.nombre)+'" required></div><div><label>Cédula<span class="req" aria-hidden="true">*</span></label><input name="c" inputmode="numeric" maxlength="13" placeholder="000-0000000-0" value="'+esc(c.cedula||"")+'" required></div><div class="cf"><div><label>Teléfono<span class="req" aria-hidden="true">*</span></label><input name="t" type="tel" inputmode="numeric" maxlength="12" value="'+esc(c.telefono||"")+'" required></div><div><label>Zona<span class="req" aria-hidden="true">*</span></label>'+(ZOK?'<select name="zid" required>'+zonaOpts(c.zona_id)+"</select>"+(c.zona&&!c.zona_id?'<p class="hint">Escrito antes: «'+esc(c.zona)+"»</p>":""):'<input name="z" value="'+esc(c.zona||"")+'">')+'</div></div><label class="chk"><input type="checkbox" name="pc"'+(c.puede_comites?" checked":"")+'> Puede crear subcoordinadores</label><p class="hint">Cambiar el nombre aquí no cambia su usuario de entrada.</p><button class="btn wide" type="submit">Guardar cambios</button></form>'+
-      '<button class="btn ghost wide" style="margin-top:10px" data-rc="'+id+'">Restablecer clave a su cédula</button>'+
+      '<button class="btn ghost wide" style="margin-top:10px" data-rc="'+id+'">Restablecer clave a su cédula</button><div id="wa-'+id+'"></div>'+
       '<h3 class="mh">Subcoordinadores ('+js.length+')</h3>'+(js.length?js.map(function(j){
-        return '<div class="row"><div><div class="nm">'+esc(j.nombre)+(j.activo?"":" (desactivado)")+'</div><div class="sub">'+j.n+" militantes"+(j.telefono?" · "+esc(j.telefono):"")+'</div></div><div class="acts"><button class="btn ghost" data-rc="'+j.id+'">Clave = cédula</button><button class="btn ghost" data-act="'+j.id+'" data-to="'+(j.activo?0:1)+'">'+(j.activo?"Desactivar":"Activar")+'</button></div></div>'}).join(""):'<p class="empty">No tiene subcoordinadores.</p>')+
+        return '<div class="row"><div><div class="nm">'+esc(j.nombre)+(j.activo?"":" (desactivado)")+'</div><div class="sub">'+j.n+" militantes"+(j.telefono?" · "+esc(j.telefono):"")+'</div></div><div class="acts"><span id="wa-'+j.id+'"></span><button class="btn ghost" data-rc="'+j.id+'">Clave = cédula</button><button class="btn ghost" data-act="'+j.id+'" data-to="'+(j.activo?0:1)+'">'+(j.activo?"Desactivar":"Activar")+'</button></div></div>'}).join(""):'<p class="empty">No tiene subcoordinadores.</p>')+
       '<h3 class="mh">Militantes propios</h3><button class="btn wide" data-pdf="'+id+'" style="margin-bottom:6px">Informe en PDF (con sus subcoordinadores)</button><div id="ml-'+id+'"><p class="empty">Cargando…</p></div>';
+    waAcceso($("wa-"+id),id,c.nombre,c.telefono,"coordinador");
+    js.forEach(function(j){waAcceso($("wa-"+j.id),j.id,j.nombre,j.telefono,"subcoordinador",true)});
     var r=await sb.from("seguidores").select("padron_id,creado,padron(nombre,cedula,recinto,colegio,celular,estado)").eq("coord_id",id).order("creado",{ascending:false});
     var ml=$("ml-"+id);if(!ml)return;
     if(r.error){ml.innerHTML='<p class="empty">'+esc(errMsg(r.error))+"</p>";return}
@@ -1349,7 +1362,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
       var vs=telMal(f.elements.t.value);if(vs){toast(vs);return}
       var rs=await sb.rpc("editar_jefe",jefeArgs(s,{p_nombre:sn,p_telefono:f.elements.t.value,p_zona:f.elements.z.value.trim()}));
       if(rs.error){toast(errMsg(rs.error));return}
-      toast("Cambios guardados");loadSubs();return}
+      $("snew").innerHTML="";toast("Cambios guardados");loadSubs();return}
     if(f.getAttribute("data-zedit")){
       e.preventDefault();var zid=+f.getAttribute("data-zedit"),num=zCod(f.elements.num.value);
       if(!num){toast(ZERR);return}
@@ -1377,7 +1390,7 @@ if(typeof module!=="undefined")module.exports={parsePage:parsePage,joinPages:joi
     else upd.zona=f.elements.z.value.trim();
     var r=await sb.from("perfiles").update(upd).eq("id",id);
     if(r.error){toast(errMsg(r.error));return}
-    toast("Cambios guardados");loadRes()
+    $("cnew").innerHTML="";toast("Cambios guardados");loadRes()
   });
   boot();
 })();
